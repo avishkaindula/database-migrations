@@ -1,11 +1,16 @@
 -- Create a table for public profiles
-create table profiles (
-  id uuid references auth.users on delete cascade not null primary key,
-  updated_at timestamp with time zone,
+CREATE TABLE profiles (
+  id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   full_name text,
   avatar_url text,
   website text,
-  email text
+  email text,
+  phone text,
+  address text,
+  organization_name text,
+  userRole text
 );
 -- Set up Row Level Security (RLS)
 -- See https://supabase.com/docs/guides/auth/row-level-security for more details.
@@ -30,11 +35,30 @@ as $$
 declare
   user_type text;
 begin
-  insert into public.profiles (id, full_name, avatar_url, email)
-  values (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url', new.email);
-  
   -- Get user type from metadata
-  user_type := new.raw_user_meta_data->>'user_type';
+  user_role := new.raw_user_meta_data->>'user_role';
+  
+  -- Insert profile with all relevant fields
+  insert into public.profiles (
+    id, 
+    full_name, 
+    avatar_url, 
+    email, 
+    phone, 
+    address, 
+    organization_name, 
+    userRole
+  )
+  values (
+    new.id, 
+    new.raw_user_meta_data->>'full_name', 
+    new.raw_user_meta_data->>'avatar_url', 
+    new.email,
+    new.raw_user_meta_data->>'phone',
+    new.raw_user_meta_data->>'address',
+    new.raw_user_meta_data->>'organization_name',
+    user_role
+  );
   
   -- Assign roles based on metadata
   if user_type = 'org_admin_pending' then
