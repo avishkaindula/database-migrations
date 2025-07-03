@@ -1,6 +1,6 @@
 -- Custom types
 create type public.app_permission as enum ();
-create type public.app_role as enum ('user', 'user_inactive', 'cin_admin', 'super_admin', 'org_admin_active', 'org_admin_inactive', 'org_admin_pending');
+create type public.app_role as enum ('user_active', 'user_inactive', 'cin_admin', 'super_admin', 'org_admin_active', 'org_admin_inactive', 'org_admin_pending');
 
 -- USER ROLES
 create table public.user_roles (

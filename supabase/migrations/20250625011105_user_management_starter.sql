@@ -33,10 +33,10 @@ returns trigger
 set search_path = ''
 as $$
 declare
-  user_type text;
+  user_role text;
 begin
-  -- Get user type from metadata
-  user_role := new.raw_user_meta_data->>'user_role';
+  -- Get user role from metadata, default to 'user_active' if not provided
+  user_role := coalesce(new.raw_user_meta_data->>'user_role', 'user_active');
   
   -- Insert profile with all relevant fields
   insert into public.profiles (
@@ -61,15 +61,15 @@ begin
   );
   
   -- Assign roles based on metadata
-  if user_type = 'org_admin_pending' then
+  if user_role = 'org_admin_pending' then
     insert into public.user_roles (user_id, role) values (new.id, 'org_admin_pending');
-  elsif user_type = 'cin_admin' then
+  elsif user_role = 'cin_admin' then
     insert into public.user_roles (user_id, role) values (new.id, 'cin_admin');
-  elsif user_type = 'super_admin' then
+  elsif user_role = 'super_admin' then
     insert into public.user_roles (user_id, role) values (new.id, 'super_admin');
   else
     -- Default role for all other users
-    insert into public.user_roles (user_id, role) values (new.id, 'user');
+    insert into public.user_roles (user_id, role) values (new.id, 'user_active');
   end if;
   
   return new;
