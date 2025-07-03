@@ -36,27 +36,42 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          address: string | null
           avatar_url: string | null
+          created_at: string
           email: string | null
           full_name: string | null
           id: string
-          updated_at: string | null
+          organization_name: string | null
+          phone: string | null
+          updated_at: string
+          userrole: string | null
           website: string | null
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
+          created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
-          updated_at?: string | null
+          organization_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          userrole?: string | null
           website?: string | null
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
+          created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
-          updated_at?: string | null
+          organization_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          userrole?: string | null
           website?: string | null
         }
         Relationships: []
@@ -113,7 +128,7 @@ export type Database = {
     }
     Enums: {
       app_role:
-        | "user"
+        | "user_active"
         | "user_inactive"
         | "cin_admin"
         | "super_admin"
@@ -239,7 +254,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: [
-        "user",
+        "user_active",
         "user_inactive",
         "cin_admin",
         "super_admin",
