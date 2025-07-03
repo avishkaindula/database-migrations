@@ -27,9 +27,27 @@ create function public.handle_new_user()
 returns trigger
 set search_path = ''
 as $$
+declare
+  user_type text;
 begin
   insert into public.profiles (id, full_name, avatar_url, email)
   values (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url', new.email);
+  
+  -- Get user type from metadata
+  user_type := new.raw_user_meta_data->>'user_type';
+  
+  -- Assign roles based on metadata
+  if user_type = 'org_admin' then
+    insert into public.user_roles (user_id, role) values (new.id, 'org_admin');
+  elsif user_type = 'cin_admin' then
+    insert into public.user_roles (user_id, role) values (new.id, 'cin_admin');
+  elsif user_type = 'super_admin' then
+    insert into public.user_roles (user_id, role) values (new.id, 'super_admin');
+  else
+    -- Default role for all other users
+    insert into public.user_roles (user_id, role) values (new.id, 'user');
+  end if;
+  
   return new;
 end;
 $$ language plpgsql security definer;
