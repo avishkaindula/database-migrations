@@ -37,8 +37,8 @@ begin
   user_type := new.raw_user_meta_data->>'user_type';
   
   -- Assign roles based on metadata
-  if user_type = 'org_admin' then
-    insert into public.user_roles (user_id, role) values (new.id, 'org_admin');
+  if user_type = 'org_admin_pending' then
+    insert into public.user_roles (user_id, role) values (new.id, 'org_admin_pending');
   elsif user_type = 'cin_admin' then
     insert into public.user_roles (user_id, role) values (new.id, 'cin_admin');
   elsif user_type = 'super_admin' then
