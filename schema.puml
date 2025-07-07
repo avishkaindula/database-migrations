@@ -1,0 +1,388 @@
+@startuml
+!define TABLE(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define PK(x) <u>x</u>
+!define FK(x) <i>x</i>
+
+' Core User Management
+TABLE(profiles, "profiles") {
+  PK(id): uuid
+  email: varchar(255)
+  username: varchar(50)
+  full_name: varchar(100)
+  avatar_url: varchar(500)
+  phone: varchar(20)
+  date_of_birth: date
+  location: varchar(100)
+  bio: text
+  FK(role_id): uuid
+  total_points: integer default 0
+  redeemable_points: integer default 0
+  leaderboard_points: integer default 0
+  is_banned: boolean default false
+  ban_expires_at: timestamp
+  warning_count: integer default 0
+  created_at: timestamp
+  updated_at: timestamp
+}
+
+TABLE(roles, "roles") {
+  PK(id): uuid
+  name: varchar(50) -- 'SUPER_ADMIN', 'ORG_ADMIN', 'USER'
+  description: text
+  permissions: jsonb
+  created_at: timestamp
+}
+
+' Remove user_roles table as roles are now directly on profiles
+
+' Organization Management
+TABLE(organizations, "organizations") {
+  PK(id): uuid
+  name: varchar(100)
+  description: text
+  logo_url: varchar(500)
+  website: varchar(255)
+  contact_email: varchar(255)
+  location: varchar(100)
+  is_player_org_enabled: boolean default false
+  is_task_maker_enabled: boolean default true
+  is_prize_giver_enabled: boolean default true
+  verification_status: varchar(20) default 'pending'
+  verified_by: uuid
+  verified_at: timestamp
+  verification_notes: text
+  rejection_reason: text
+  created_at: timestamp
+  updated_at: timestamp
+}
+
+TABLE(organization_members, "organization_members") {
+  PK(id): uuid
+  FK(organization_id): uuid
+  FK(user_id): uuid
+  status: varchar(20) default 'pending' -- 'pending', 'active', 'rejected', 'left'
+  joined_at: timestamp
+  requested_at: timestamp
+  approved_by: uuid
+  is_admin: boolean default false -- organization-level admin flag
+}
+
+' Task Management
+TABLE(tasks, "tasks") {
+  PK(id): uuid
+  FK(organization_id): uuid
+  title: varchar(200)
+  description: text
+  instructions: text
+  task_type: varchar(50) -- 'data_collection', 'photo_submission', 'survey', 'observation'
+  category: varchar(50)
+  difficulty_level: varchar(20)
+  points_reward: integer
+  max_submissions_per_user: integer default 1
+  cooldown_period_days: integer default 5
+  location_required: boolean default false
+  target_location: varchar(100)
+  location_radius_km: decimal(10,2)
+  required_data_fields: jsonb
+  validation_rules: jsonb -- automatic validation criteria
+  file_upload_required: boolean default false
+  allowed_file_types: jsonb -- ['image/*', 'video/*', 'application/pdf', 'application/zip']
+  max_file_size_mb: integer default 10
+  max_files_per_submission: integer default 5
+  expires_at: timestamp
+  is_active: boolean default true
+  created_by: uuid
+  created_at: timestamp
+  updated_at: timestamp
+}
+
+TABLE(task_attachments, "task_attachments") {
+  PK(id): uuid
+  FK(task_id): uuid
+  file_name: varchar(255)
+  file_url: varchar(500)
+  file_type: varchar(50)
+  file_size: integer
+  uploaded_at: timestamp
+}
+
+' Submission Management
+TABLE(submissions, "submissions") {
+  PK(id): uuid
+  FK(task_id): uuid
+  FK(user_id): uuid
+  submission_data: jsonb
+  location_lat: decimal(10,8)
+  location_lng: decimal(11,8)
+  status: varchar(20) default 'pending'
+  points_awarded: integer default 0
+  review_status: varchar(20) default 'pending'
+  reviewed_by: uuid
+  reviewed_at: timestamp
+  review_notes: text
+  is_flagged: boolean default false
+  flag_reason: text
+  submitted_at: timestamp
+  updated_at: timestamp
+}
+
+TABLE(submission_attachments, "submission_attachments") {
+  PK(id): uuid
+  FK(submission_id): uuid
+  file_name: varchar(255)
+  file_url: varchar(500)
+  file_type: varchar(50)
+  file_size: integer
+  uploaded_at: timestamp
+}
+
+' Badge System
+TABLE(badges, "badges") {
+  PK(id): uuid
+  name: varchar(100)
+  description: text
+  icon_url: varchar(500)
+  criteria_type: varchar(50) -- 'points_threshold', 'task_completion', 'submission_count', 'streak', 'category_expert'
+  criteria_config: jsonb -- specific configuration for each criteria type
+  points_threshold: integer
+  task_category: varchar(50) -- for category-specific badges
+  completion_count: integer -- number of tasks/submissions needed
+  badge_type: varchar(50) -- 'achievement', 'milestone', 'special'
+  rarity: varchar(20) -- 'common', 'rare', 'epic', 'legendary'
+  is_auto_awarded: boolean default true
+  is_active: boolean default true
+  sort_order: integer default 0
+  created_at: timestamp
+}
+
+TABLE(user_badges, "user_badges") {
+  PK(id): uuid
+  FK(user_id): uuid
+  FK(badge_id): uuid
+  earned_at: timestamp
+  earned_through: varchar(100)
+  metadata: jsonb
+}
+
+' Prize and Redemption System
+TABLE(prizes, "prizes") {
+  PK(id): uuid
+  FK(organization_id): uuid
+  name: varchar(100)
+  description: text
+  image_url: varchar(500)
+  point_cost: integer
+  quantity_available: integer
+  quantity_redeemed: integer default 0
+  prize_type: varchar(50)
+  redemption_instructions: text
+  terms_conditions: text
+  expires_at: timestamp
+  is_active: boolean default true
+  created_by: uuid
+  created_at: timestamp
+  updated_at: timestamp
+}
+
+TABLE(redemptions, "redemptions") {
+  PK(id): uuid
+  FK(user_id): uuid
+  FK(prize_id): uuid
+  points_spent: integer
+  status: varchar(20) default 'pending'
+  redemption_code: varchar(100)
+  redeemed_at: timestamp
+  fulfilled_at: timestamp
+  fulfilled_by: uuid
+  notes: text
+}
+
+' Points and Leaderboard
+TABLE(point_transactions, "point_transactions") {
+  PK(id): uuid
+  FK(user_id): uuid
+  FK(submission_id): uuid
+  FK(redemption_id): uuid
+  transaction_type: varchar(50)
+  points_change: integer
+  points_balance_after: integer
+  redeemable_points_change: integer
+  leaderboard_points_change: integer
+  reason: varchar(200)
+  metadata: jsonb
+  created_at: timestamp
+}
+
+TABLE(leaderboards, "leaderboards") {
+  PK(id): uuid
+  name: varchar(100)
+  description: text
+  leaderboard_type: varchar(50) -- 'global_all_time', 'global_monthly', 'global_weekly', 'global_daily'
+  time_period: varchar(20) -- 'all_time', 'monthly', 'weekly', 'daily'
+  start_date: date
+  end_date: date
+  is_active: boolean default true
+  auto_reset: boolean default false -- for recurring leaderboards
+  created_at: timestamp
+}
+
+TABLE(leaderboard_entries, "leaderboard_entries") {
+  PK(id): uuid
+  FK(leaderboard_id): uuid
+  FK(user_id): uuid
+  points: integer
+  rank_position: integer
+  previous_rank: integer
+  rank_change: integer -- positive/negative change from previous period
+  last_updated: timestamp
+}
+
+' Warning and Moderation System
+TABLE(user_warnings, "user_warnings") {
+  PK(id): uuid
+  FK(user_id): uuid
+  FK(submission_id): uuid
+  warning_type: varchar(50)
+  reason: text
+  severity: varchar(20)
+  issued_by: uuid
+  action_taken: varchar(100)
+  points_reverted: integer default 0
+  badges_reverted: jsonb
+  expires_at: timestamp
+  created_at: timestamp
+}
+
+TABLE(user_bans, "user_bans") {
+  PK(id): uuid
+  FK(user_id): uuid
+  ban_type: varchar(50)
+  reason: text
+  banned_by: uuid
+  ban_duration_days: integer
+  starts_at: timestamp
+  expires_at: timestamp
+  is_active: boolean default true
+  created_at: timestamp
+}
+
+' Activity and Audit
+TABLE(user_activities, "user_activities") {
+  PK(id): uuid
+  FK(user_id): uuid
+  activity_type: varchar(50)
+  description: varchar(500)
+  metadata: jsonb
+  ip_address: inet
+  user_agent: text
+  created_at: timestamp
+}
+
+' Badge Processing and File Management
+TABLE(badge_processing_queue, "badge_processing_queue") {
+  PK(id): uuid
+  FK(user_id): uuid
+  FK(submission_id): uuid
+  FK(point_transaction_id): uuid
+  trigger_type: varchar(50) -- 'submission_approved', 'points_awarded', 'task_completed'
+  processed: boolean default false
+  processed_at: timestamp
+  badges_awarded: jsonb
+  created_at: timestamp
+}
+
+TABLE(file_metadata, "file_metadata") {
+  PK(id): uuid
+  original_filename: varchar(255)
+  stored_filename: varchar(255)
+  file_path: varchar(500)
+  file_url: varchar(500)
+  mime_type: varchar(100)
+  file_size_bytes: bigint
+  file_hash: varchar(64) -- for duplicate detection
+  uploaded_by: uuid
+  upload_session_id: varchar(100)
+  is_processed: boolean default false
+  virus_scan_status: varchar(20) default 'pending'
+  created_at: timestamp
+}
+
+' Task Categories and Validation Rules
+TABLE(task_categories, "task_categories") {
+  PK(id): uuid
+  name: varchar(100)
+  description: text
+  icon_url: varchar(500)
+  color_code: varchar(7) -- hex color
+  default_points: integer
+  is_active: boolean default true
+  sort_order: integer default 0
+}
+
+TABLE(validation_rules, "validation_rules") {
+  PK(id): uuid
+  name: varchar(100)
+  description: text
+  rule_type: varchar(50) -- 'required_field', 'min_length', 'max_length', 'regex', 'file_count', 'location_check'
+  rule_config: jsonb
+  error_message: varchar(255)
+  is_active: boolean default true
+}
+
+TABLE(task_validation_rules, "task_validation_rules") {
+  PK(id): uuid
+  FK(task_id): uuid
+  FK(validation_rule_id): uuid
+  field_name: varchar(100) -- which field this rule applies to
+  is_required: boolean default true
+}
+
+' Relationships
+profiles ||--o{ roles : "has role"
+profiles ||--o{ organization_members : "belongs to"
+organizations ||--o{ organization_members : "has members"
+profiles ||--o{ organizations : "verified by"
+
+organizations ||--o{ tasks : "creates"
+profiles ||--o{ tasks : "created by"
+task_categories ||--o{ tasks : "categorizes"
+tasks ||--o{ task_attachments : "has"
+tasks ||--o{ task_validation_rules : "has rules"
+validation_rules ||--o{ task_validation_rules : "applied to"
+
+tasks ||--o{ submissions : "receives"
+profiles ||--o{ submissions : "submits"
+submissions ||--o{ submission_attachments : "has"
+profiles ||--o{ submissions : "reviewed by"
+file_metadata ||--o{ submission_attachments : "describes"
+file_metadata ||--o{ task_attachments : "describes"
+
+badges ||--o{ user_badges : "awarded"
+profiles ||--o{ user_badges : "earned"
+profiles ||--o{ badge_processing_queue : "queued for"
+submissions ||--o{ badge_processing_queue : "triggers"
+
+organizations ||--o{ prizes : "offers"
+profiles ||--o{ prizes : "created by"
+prizes ||--o{ redemptions : "redeemed"
+profiles ||--o{ redemptions : "redeems"
+profiles ||--o{ redemptions : "fulfilled by"
+
+profiles ||--o{ point_transactions : "has"
+submissions ||--o{ point_transactions : "generates"
+redemptions ||--o{ point_transactions : "generates"
+point_transactions ||--o{ badge_processing_queue : "triggers"
+
+leaderboards ||--o{ leaderboard_entries : "contains"
+profiles ||--o{ leaderboard_entries : "appears in"
+
+profiles ||--o{ user_warnings : "receives"
+submissions ||--o{ user_warnings : "triggers"
+profiles ||--o{ user_warnings : "issued by"
+
+profiles ||--o{ user_bans : "receives"
+profiles ||--o{ user_bans : "issued by"
+
+profiles ||--o{ user_activities : "performs"
+profiles ||--o{ file_metadata : "uploads"
+@enduml
