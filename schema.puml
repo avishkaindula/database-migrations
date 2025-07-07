@@ -1,6 +1,6 @@
 @startchen
 
-entity profiles {
+entity user {
   full_name
   email
   phone
@@ -12,10 +12,40 @@ entity user_roles {
   role
 }
 
+entity missions {
+  name
+  description
+
+}
+
+entity player_organizations {
+  name
+}
+
+entity events {
+  name
+}
+
+entity submission_data {
+  type
+  data
+}
+
+entity events {
+  name
+}
+
 relationship assigned_to {
 }
 
-profiles -1- assigned_to
+user -1- assigned_to
 assigned_to -1- user_roles
+
+user -1- player_organizations
+user -1- missions
+missions -1- events
+events -1- submission_data
+player_organizations -1- missions
+
 
 @endchen
