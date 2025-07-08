@@ -1,11 +1,16 @@
 -- Create a table for public profiles
-create table profiles (
-  id uuid references auth.users on delete cascade not null primary key,
-  updated_at timestamp with time zone,
+CREATE TABLE profiles (
+  id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   full_name text,
   avatar_url text,
   website text,
-  email text
+  email text,
+  phone text,
+  address text,
+  organization_name text,
+  userRole text
 );
 -- Set up Row Level Security (RLS)
 -- See https://supabase.com/docs/guides/auth/row-level-security for more details.
@@ -27,9 +32,46 @@ create function public.handle_new_user()
 returns trigger
 set search_path = ''
 as $$
+declare
+  user_role text;
 begin
-  insert into public.profiles (id, full_name, avatar_url, email)
-  values (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url', new.email);
+  -- Get user role from metadata, default to 'user_active' if not provided
+  user_role := coalesce(new.raw_user_meta_data->>'user_role', 'user_active');
+  
+  -- Insert profile with all relevant fields
+  insert into public.profiles (
+    id, 
+    full_name, 
+    avatar_url, 
+    email, 
+    phone, 
+    address, 
+    organization_name, 
+    userRole
+  )
+  values (
+    new.id, 
+    new.raw_user_meta_data->>'full_name', 
+    new.raw_user_meta_data->>'avatar_url', 
+    new.email,
+    new.raw_user_meta_data->>'phone',
+    new.raw_user_meta_data->>'address',
+    new.raw_user_meta_data->>'organization_name',
+    user_role
+  );
+  
+  -- Assign roles based on metadata
+  if user_role = 'org_admin_pending' then
+    insert into public.user_roles (user_id, role) values (new.id, 'org_admin_pending');
+  elsif user_role = 'cin_admin' then
+    insert into public.user_roles (user_id, role) values (new.id, 'cin_admin');
+  elsif user_role = 'super_admin' then
+    insert into public.user_roles (user_id, role) values (new.id, 'super_admin');
+  else
+    -- Default role for all other users
+    insert into public.user_roles (user_id, role) values (new.id, 'user_active');
+  end if;
+  
   return new;
 end;
 $$ language plpgsql security definer;
