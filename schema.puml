@@ -1,51 +1,127 @@
 @startchen
 
-entity user {
-  full_name
+entity Player {
+  id
+  fullName
   email
   phone
-  organization_name
-  userRole
 }
 
-entity user_roles {
+entity Admin {
+  id
+}
+
+entity AdminRole {
+  id
   role
 }
 
-entity missions {
+entity Mission {
+  id
   name
   description
-
 }
 
-entity player_organizations {
+entity Event {
+  id
   name
 }
 
-entity events {
+entity PlayerOrganization {
+  id
   name
 }
 
-entity submission_data {
+entity Submission {
   type
   data
 }
 
-entity events {
-  name
+entity PointTransaction {
+  type
+  data
 }
 
-relationship assigned_to {
+entity Badge {
+  id
+  type
 }
 
-user -1- assigned_to
-assigned_to -1- user_roles
+entity Reward {
+  id
+  type
+}
 
-user -1- player_organizations
-user -1- missions
-missions -1- events
-events -1- submission_data
-player_organizations -1- missions
+entity RewardRedemption {
+  id
+}
 
+relationship wins {
+}
+
+relationship has_a {
+}
+
+relationship has_b {
+}
+
+relationship generates_a {
+}
+
+relationship generates_b {
+}
+
+relationship submits {
+}
+
+relationship completes {
+}
+
+relationship participates_in {
+}
+
+relationship belongs_to {
+}
+
+relationship can_redeem {
+}
+
+relationship manages {
+}
+
+relationship creates {
+}
+
+relationship reviews {
+}
+
+Player -N- completes
+completes -M- Mission
+
+Player -N- participates_in
+participates_in -M- Event
+
+Player -N- belongs_to
+belongs_to -M- PlayerOrganization
+
+Player -N- wins
+wins -M- Badge
+
+Player -1- submits
+submits -N- Submission
+
+Player -1- has_a
+has_a -N- PointTransaction
+
+Submission -1- generates_a
+generates_a -1- PointTransaction
+
+Mission -1- has_b
+has_b -N- Submission
+
+Event -1- generates_b
+generates_b -N- PointTransaction
 
 @endchen
+
+// Additional Tables - Participation
