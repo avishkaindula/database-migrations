@@ -123,32 +123,10 @@ declare
   org_id uuid;
   org_name text;
 begin
-  -- Get user type from metadata (player or admin)
+  -- Get user type from metadata, default to 'player' if not provided
   user_type := coalesce(new.raw_user_meta_data->>'user_type', 'player');
   
-  if user_type = 'player' then
-    -- Insert into players table
-    insert into public.players (
-      id, 
-      full_name, 
-      avatar_url, 
-      email, 
-      phone, 
-      address
-    )
-    values (
-      new.id, 
-      new.raw_user_meta_data->>'full_name', 
-      new.raw_user_meta_data->>'avatar_url', 
-      new.email,
-      new.raw_user_meta_data->>'phone',
-      new.raw_user_meta_data->>'address'
-    );
-    
-    -- Default player role
-    insert into public.user_roles (user_id, role) values (new.id, 'player_active');
-    
-  elsif user_type = 'admin' then
+  if user_type = 'admin' then
     -- Insert into admins table
     insert into public.admins (
       id, 
@@ -208,6 +186,28 @@ begin
       insert into public.user_roles (user_id, role) 
       values (new.id, role_item::public.app_role);
     end loop;
+    
+  else
+    -- Default case: create player (for any user_type that's not 'admin' or when user_type is null)
+    insert into public.players (
+      id, 
+      full_name, 
+      avatar_url, 
+      email, 
+      phone, 
+      address
+    )
+    values (
+      new.id, 
+      new.raw_user_meta_data->>'full_name', 
+      new.raw_user_meta_data->>'avatar_url', 
+      new.email,
+      new.raw_user_meta_data->>'phone',
+      new.raw_user_meta_data->>'address'
+    );
+    
+    -- Default player role
+    insert into public.user_roles (user_id, role) values (new.id, 'player_active');
     
   end if;
   
