@@ -46,19 +46,19 @@ as $$
       select 
         o.id, 
         o.name,
-        ao.status as membership_status,
+        am.status as membership_status,
         array_agg(
           jsonb_build_object(
             'type', op.permission_type,
             'status', op.status
           )
         ) filter (where op.permission_type is not null) as capabilities
-      from public.admin_orgs ao
-      join public.organizations o on ao.organization_id = o.id
+      from public.admin_memberships am
+      join public.organizations o on am.organization_id = o.id
       left join public.organization_permissions op on op.organization_id = o.id
-      where ao.admin_id = (event->>'user_id')::uuid
-        and ao.status = 'active'
-      group by o.id, o.name, ao.status
+      where am.admin_id = (event->>'user_id')::uuid
+        and am.status = 'active'
+      group by o.id, o.name, am.status
     loop
       user_organizations_array := user_organizations_array || jsonb_build_object(
         'id', org_record.id,
@@ -104,7 +104,7 @@ grant all
 to supabase_auth_admin;
 
 grant all
-  on table public.admin_orgs
+  on table public.admin_memberships
 to supabase_auth_admin;
 
 grant all
@@ -124,7 +124,7 @@ revoke all
   from authenticated, anon, public;
 
 revoke all
-  on table public.admin_orgs
+  on table public.admin_memberships
   from authenticated, anon, public;
 
 revoke all
@@ -144,7 +144,7 @@ as permissive for select
 to supabase_auth_admin
 using (true);
 
-create policy "Allow auth admin to read admin orgs" ON public.admin_orgs
+create policy "Allow auth admin to read admin memberships" ON public.admin_memberships
 as permissive for select
 to supabase_auth_admin
 using (true);
