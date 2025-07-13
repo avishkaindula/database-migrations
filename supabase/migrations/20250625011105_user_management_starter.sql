@@ -61,7 +61,8 @@ create policy "Admins can insert organizations." on organizations
   for insert with check (exists (
     select 1 from public.user_roles 
     where user_id = (select auth.uid()) 
-    and role in ('cin_admin_active', 'player_org_admin_active')
+    and role = 'cin_admin'
+    and organization_id is null
   ));
 
 create policy "Admins can update their organizations." on organizations
@@ -70,7 +71,13 @@ create policy "Admins can update their organizations." on organizations
     join public.user_roles ur on ao.admin_id = ur.user_id
     where ao.organization_id = organizations.id
     and ur.user_id = (select auth.uid())
-    and ur.role in ('cin_admin_active', 'player_org_admin_active')
+    and ur.role = 'org_admin'
+    and ur.organization_id = organizations.id
+  ) or exists (
+    select 1 from public.user_roles 
+    where user_id = (select auth.uid()) 
+    and role = 'cin_admin'
+    and organization_id is null
   ));
 
 -- RLS Policies for players
@@ -100,7 +107,8 @@ create policy "Admin orgs are viewable by related admins." on admin_orgs
     exists (
       select 1 from public.user_roles 
       where user_id = (select auth.uid()) 
-      and role = 'cin_admin_active'
+      and role = 'cin_admin'
+      and organization_id is null
     )
   );
 
@@ -110,7 +118,8 @@ create policy "Admins can manage their org relationships." on admin_orgs
     exists (
       select 1 from public.user_roles 
       where user_id = (select auth.uid()) 
-      and role = 'cin_admin_active'
+      and role = 'cin_admin'
+      and organization_id is null
     )
   );
 
