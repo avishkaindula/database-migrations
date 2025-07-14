@@ -25,8 +25,8 @@ DECLARE
     encrypted_password TEXT;
     password_salt TEXT;
 BEGIN
-    -- Generate salt and encrypt password (Supabase compatible)
-    password_salt := encode(gen_random_bytes(16), 'hex');
+    -- Generate proper bcrypt hash (Supabase compatible)
+    password_salt := gen_salt('bf', 10);  -- bcrypt with cost 10
     encrypted_password := crypt(admin_password, password_salt);
     
     RAISE NOTICE '=== CIN ADMIN CREATION SCRIPT ===';
