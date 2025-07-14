@@ -462,3 +462,214 @@ const hasApprovedCapability = (orgId, capabilityType) => {
   )
 }
 ```
+
+## Membership Status Behavior Deep Dive
+
+Understanding when `admin_memberships.status` changes from `'pending'` to `'active'` is crucial for JWT token behavior and organization access.
+
+### When Membership Status Becomes `'active'`
+
+#### 1. **During Initial Signup** (Immediate `'active'`)
+
+**SQL Logic from `handle_new_user()` trigger:**
+
+```sql
+-- From: supabase/migrations/20250703054413_create_signup_trigger.sql
+insert into public.admin_memberships (admin_id, organization_id, status)
+values (new.id, org_id, 
+  case 
+    when (new.raw_user_meta_data->>'organization_id') is not null then 'active'
+    when exists (
+      select 1 from public.organization_permissions op
+      where op.organization_id = org_id
+        and op.permission_type in ('player_org', 'mission_creator', 'reward_creator')
+        and op.status = 'approved'
+    ) then 'active'
+    else 'pending' 
+  end
+);
+```
+
+**Scenarios for immediate `'active'` status:**
+- **Joining existing organization**: User provides `organization_id` in signup metadata
+- **Creating new org with pre-approved permissions**: Rare edge case where organization already exists with approved capabilities
+
+#### 2. **During CIN Admin Approval** (Pending → Active)
+
+**SQL Logic from `approve_organization_permissions()` function:**
+
+```sql
+-- From: supabase/migrations/20250715000000_add_organization_approval_functions.sql
+-- First, approve the organization permissions
+update public.organization_permissions
+set 
+  status = 'approved',
+  reviewed_by = reviewer_id,
+  reviewed_at = now(),
+  updated_at = now()
+where organization_id = target_organization_id
+  and status = 'pending'
+  and (permission_types is null or permission_type = any(permission_types));
+
+get diagnostics approved_count = row_count;
+
+-- CRITICAL: If ANY permissions were approved, activate the membership
+if approved_count > 0 then
+  update public.admin_memberships
+  set 
+    status = 'active',
+    updated_at = now()
+  where organization_id = target_organization_id
+    and status = 'pending';
+end if;
+```
+
+**Key Point**: As soon as ANY capability gets approved, membership becomes `'active'`!
+
+### JWT Auth Hook Filtering
+
+**SQL Logic from `custom_access_token_hook()` function:**
+
+```sql
+-- From: supabase/migrations/20250703055000_create_auth_hook.sql
+-- Only organizations with 'active' membership appear in JWT
+for org_record in 
+  select 
+    o.id, 
+    o.name,
+    am.status as membership_status,
+    array_agg(
+      jsonb_build_object(
+        'type', op.permission_type,
+        'status', op.status
+      )
+    ) filter (where op.permission_type is not null) as capabilities
+  from public.admin_memberships am
+  join public.organizations o on am.organization_id = o.id
+  left join public.organization_permissions op on op.organization_id = o.id
+  where am.admin_id = (event->>'user_id')::uuid
+    and am.status = 'active'  -- ⭐ CRITICAL FILTER
+  group by o.id, o.name, am.status
+loop
+  -- Organization gets added to user_organizations array
+end loop;
+```
+
+### Practical Examples
+
+#### Example 1: Partial Approval Makes Membership Active
+
+```javascript
+// CIN admin approves only one capability
+const { data: result } = await supabase.rpc('approve_organization_permissions', {
+  target_organization_id: 'org-uuid',
+  permission_types: ['player_org']  // Only approve this one
+})
+```
+
+**Database state after approval:**
+```sql
+-- admin_memberships table
+admin_id: user-uuid
+organization_id: org-uuid  
+status: 'active'  -- ✅ Changed from 'pending' to 'active'
+
+-- organization_permissions table
+org-uuid | player_org      | approved  -- ✅ Approved
+org-uuid | mission_creator | pending   -- ❌ Still pending
+org-uuid | reward_creator  | pending   -- ❌ Still pending
+```
+
+**Resulting JWT token:**
+```json
+{
+  "user_organizations": [
+    {
+      "id": "org-uuid",
+      "name": "Organization Name", 
+      "membership_status": "active",
+      "capabilities": [
+        {"type": "player_org", "status": "approved"},
+        {"type": "mission_creator", "status": "pending"},
+        {"type": "reward_creator", "status": "pending"}
+      ]
+    }
+  ]
+}
+```
+
+#### Example 2: No Approvals = Still Pending
+
+```javascript
+// CIN admin only rejects capabilities
+const { data: result } = await supabase.rpc('reject_organization_permissions', {
+  target_organization_id: 'org-uuid',
+  permission_types: ['mission_creator']
+})
+```
+
+**Database state after rejection:**
+```sql
+-- admin_memberships table
+admin_id: user-uuid
+organization_id: org-uuid  
+status: 'pending'  -- ❌ Still pending (no approvals happened)
+
+-- organization_permissions table  
+org-uuid | player_org      | pending   -- ❌ Still pending
+org-uuid | mission_creator | rejected  -- ❌ Rejected
+org-uuid | reward_creator  | pending   -- ❌ Still pending
+```
+
+**Resulting JWT token:**
+```json
+{
+  "user_organizations": [],  // ❌ Empty because membership still pending
+  "active_organization_id": "org-uuid"  // ✅ Still set from admins table
+}
+```
+
+### Client-Side Detection Patterns
+
+```javascript
+// Detect different organization states
+const { data: { user } } = await supabase.auth.getUser()
+const userOrganizations = user?.user_metadata?.user_organizations || []
+const activeOrgId = user?.user_metadata?.active_organization_id
+
+// Organization is fully pending (no approvals yet)
+const isFullyPending = !userOrganizations.length && activeOrgId
+
+// Organization has partial approvals  
+const hasPartialApprovals = userOrganizations.some(org =>
+  org.capabilities.some(cap => cap.status === 'pending') &&
+  org.capabilities.some(cap => cap.status === 'approved')
+)
+
+// Organization has rejections
+const hasRejections = userOrganizations.some(org =>
+  org.capabilities.some(cap => cap.status === 'rejected')
+)
+
+// Organization is fully approved
+const isFullyApproved = userOrganizations.some(org =>
+  org.capabilities.every(cap => cap.status === 'approved')
+)
+
+// Check specific capability
+const hasApprovedCapability = (orgId, capabilityType) => {
+  const org = userOrganizations.find(o => o.id === orgId)
+  return org?.capabilities.some(cap => 
+    cap.type === capabilityType && cap.status === 'approved'
+  ) || false
+}
+```
+
+### Summary: The Key Rule
+
+> **Any approved capability = Active membership = Organization appears in JWT**
+
+This design ensures:
+1. **Security**: Users can't access organization features until at least something is approved
+2. **Flexibility**: Organizations can start with basic permissions and request more later
+3. **Transparency**: JWT clearly shows what capabilities are approved/pending/rejected
