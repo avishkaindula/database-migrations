@@ -253,6 +253,240 @@ Automatically adds user context to JWT tokens:
 - Active organization ID
 - Used for client-side authorization and RLS policies
 
+### JWT Token Examples
+
+The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the tokens look like for different user scenarios:
+
+#### 1. Regular Player (Global Role)
+
+```json
+{
+  "aud": "authenticated",
+  "exp": 1721851200,
+  "iat": 1721847600,
+  "iss": "https://your-project.supabase.co/auth/v1",
+  "sub": "550e8400-e29b-41d4-a716-446655440001",
+  "email": "player@example.com",
+  "user_roles": [
+    {
+      "role": "player",
+      "scope": "global"
+    }
+  ],
+  "user_organizations": [],
+  "active_organization_id": null
+}
+```
+
+#### 2. CIN Admin (Global + Organization Roles)
+
+```json
+{
+  "aud": "authenticated",
+  "exp": 1721851200,
+  "iat": 1721847600,
+  "iss": "https://your-project.supabase.co/auth/v1",
+  "sub": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "email": "cinadmin1@climateintel.org",
+  "user_roles": [
+    {
+      "role": "cin_admin",
+      "scope": "global"
+    },
+    {
+      "role": "org_admin", 
+      "scope": "organization",
+      "organization_id": "00000000-1111-2222-3333-444444444444",
+      "organization_name": "The Climate Intelligence Network"
+    }
+  ],
+  "user_organizations": [
+    {
+      "id": "00000000-1111-2222-3333-444444444444",
+      "name": "The Climate Intelligence Network",
+      "membership_status": "active",
+      "capabilities": [
+        {"type": "player_org", "status": "approved"},
+        {"type": "mission_creator", "status": "approved"},
+        {"type": "reward_creator", "status": "approved"}
+      ]
+    }
+  ],
+  "active_organization_id": "00000000-1111-2222-3333-444444444444"
+}
+```
+
+#### 3. Organization Admin (Pending Approval)
+
+```json
+{
+  "aud": "authenticated", 
+  "exp": 1721851200,
+  "iat": 1721847600,
+  "iss": "https://your-project.supabase.co/auth/v1",
+  "sub": "123e4567-e89b-12d3-a456-426614174001",
+  "email": "admin@greentech.org",
+  "user_roles": [
+    {
+      "role": "org_admin",
+      "scope": "organization", 
+      "organization_id": "987fcdeb-51a2-4b3c-9d4e-5f6789abcdef",
+      "organization_name": "GreenTech Solutions"
+    }
+  ],
+  "user_organizations": [
+    {
+      "id": "987fcdeb-51a2-4b3c-9d4e-5f6789abcdef",
+      "name": "GreenTech Solutions",
+      "membership_status": "active",
+      "capabilities": [
+        {"type": "player_org", "status": "pending"},
+        {"type": "mission_creator", "status": "pending"}
+      ]
+    }
+  ],
+  "active_organization_id": "987fcdeb-51a2-4b3c-9d4e-5f6789abcdef"
+}
+```
+
+#### 4. Organization Admin (Approved with Mixed Permissions)
+
+```json
+{
+  "aud": "authenticated",
+  "exp": 1721851200, 
+  "iat": 1721847600,
+  "iss": "https://your-project.supabase.co/auth/v1",
+  "sub": "456e7890-e12c-34d5-b678-901234567890",
+  "email": "admin@ecoalliance.org",
+  "user_roles": [
+    {
+      "role": "org_admin",
+      "scope": "organization",
+      "organization_id": "111a222b-333c-444d-555e-666f777g888h", 
+      "organization_name": "Eco Alliance"
+    }
+  ],
+  "user_organizations": [
+    {
+      "id": "111a222b-333c-444d-555e-666f777g888h",
+      "name": "Eco Alliance", 
+      "membership_status": "active",
+      "capabilities": [
+        {"type": "player_org", "status": "approved"},
+        {"type": "mission_creator", "status": "approved"},
+        {"type": "reward_creator", "status": "rejected"}
+      ]
+    }
+  ],
+  "active_organization_id": "111a222b-333c-444d-555e-666f777g888h"
+}
+```
+
+#### 5. Multi-Organization Admin
+
+```json
+{
+  "aud": "authenticated",
+  "exp": 1721851200,
+  "iat": 1721847600, 
+  "iss": "https://your-project.supabase.co/auth/v1",
+  "sub": "789a012b-345c-678d-901e-234f567g890h",
+  "email": "admin@consultant.com",
+  "user_roles": [
+    {
+      "role": "org_admin",
+      "scope": "organization",
+      "organization_id": "aaa1111b-222c-333d-444e-555f666g777h",
+      "organization_name": "Climate Consultants"
+    },
+    {
+      "role": "org_admin", 
+      "scope": "organization",
+      "organization_id": "bbb2222c-333d-444e-555f-666g777h888i",
+      "organization_name": "Green Solutions Inc"
+    }
+  ],
+  "user_organizations": [
+    {
+      "id": "aaa1111b-222c-333d-444e-555f666g777h",
+      "name": "Climate Consultants",
+      "membership_status": "active", 
+      "capabilities": [
+        {"type": "player_org", "status": "approved"},
+        {"type": "mission_creator", "status": "approved"}
+      ]
+    },
+    {
+      "id": "bbb2222c-333d-444e-555f-666g777h888i",
+      "name": "Green Solutions Inc",
+      "membership_status": "active",
+      "capabilities": [
+        {"type": "player_org", "status": "approved"}
+      ]
+    }
+  ],
+  "active_organization_id": "aaa1111b-222c-333d-444e-555f666g777h"
+}
+```
+
+#### 6. New User (No Profile Created Yet)
+
+```json
+{
+  "aud": "authenticated",
+  "exp": 1721851200,
+  "iat": 1721847600,
+  "iss": "https://your-project.supabase.co/auth/v1", 
+  "sub": "999z888y-777x-666w-555v-444u333t222s",
+  "email": "newuser@example.com",
+  "user_roles": [],
+  "user_organizations": [],
+  "active_organization_id": null
+}
+```
+
+### Using JWT Claims in Client Applications
+
+You can access these claims in your client application:
+
+```javascript
+// Get current user and token
+const { data: { user } } = await supabase.auth.getUser()
+const token = (await supabase.auth.getSession()).data.session?.access_token
+
+// Decode token to access custom claims (or use supabase.auth.getUser())
+const userRoles = user?.user_metadata?.user_roles || []
+const userOrganizations = user?.user_metadata?.user_organizations || []
+const activeOrgId = user?.user_metadata?.active_organization_id
+
+// Check if user has specific role
+const isCinAdmin = userRoles.some(role => 
+  role.role === 'cin_admin' && role.scope === 'global'
+)
+
+// Check if user is admin of specific organization
+const isOrgAdmin = (orgId) => userRoles.some(role =>
+  role.role === 'org_admin' && 
+  role.scope === 'organization' && 
+  role.organization_id === orgId
+)
+
+// Get organization capabilities
+const getOrgCapabilities = (orgId) => {
+  const org = userOrganizations.find(o => o.id === orgId)
+  return org?.capabilities || []
+}
+
+// Check if organization has specific approved capability
+const hasApprovedCapability = (orgId, capabilityType) => {
+  const capabilities = getOrgCapabilities(orgId)
+  return capabilities.some(cap => 
+    cap.type === capabilityType && cap.status === 'approved'
+  )
+}
+```
+
 ## Organization Management Workflow
 
 ### 1. Organization Signup
