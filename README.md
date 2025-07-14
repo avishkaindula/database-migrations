@@ -334,20 +334,12 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
       "organization_name": "GreenTech Solutions"
     }
   ],
-  "user_organizations": [
-    {
-      "id": "987fcdeb-51a2-4b3c-9d4e-5f6789abcdef",
-      "name": "GreenTech Solutions",
-      "membership_status": "active",
-      "capabilities": [
-        {"type": "player_org", "status": "pending"},
-        {"type": "mission_creator", "status": "pending"}
-      ]
-    }
-  ],
+  "user_organizations": [],
   "active_organization_id": "987fcdeb-51a2-4b3c-9d4e-5f6789abcdef"
 }
 ```
+
+**Important**: Notice that `user_organizations` is empty even though the user has an `org_admin` role. This is because the auth hook only includes organizations where `admin_memberships.status = 'active'`. When the organization is pending approval, the membership status is `'pending'`, so the organization doesn't appear in the JWT's `user_organizations` array. However, the `user_roles` array still shows the `org_admin` role, and `active_organization_id` is still set.
 
 #### 4. Organization Admin (Approved with Mixed Permissions)
 
