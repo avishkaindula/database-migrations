@@ -233,3 +233,19 @@ begin
   return capabilities;
 end;
 $$ language plpgsql stable security definer set search_path = '';
+
+-- Populate role permissions
+INSERT INTO public.role_permissions (role, permission) VALUES
+  -- CIN Admin permissions (global access)
+  ('cin_admin', 'approve_organizations'),
+  ('cin_admin', 'manage_cin_admins'),
+  ('cin_admin', 'manage_organization'),
+  ('cin_admin', 'manage_players'),
+  ('cin_admin', 'create_missions'),
+  ('cin_admin', 'manage_missions'),
+  ('cin_admin', 'create_rewards'),
+  ('cin_admin', 'manage_rewards'),
+  
+  -- Org Admin permissions (organization-scoped, but also checked via organization_permissions)
+  ('org_admin', 'manage_organization'),
+  ('org_admin', 'manage_players');

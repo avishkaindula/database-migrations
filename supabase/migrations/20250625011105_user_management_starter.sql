@@ -174,7 +174,16 @@ begin
     if org_id is not null then
       insert into public.admin_memberships (admin_id, organization_id, status)
       values (new.id, org_id, 
-        case when (new.raw_user_meta_data->>'organization_id') is not null then 'active' else 'pending' end
+        case 
+          when (new.raw_user_meta_data->>'organization_id') is not null then 'active'
+          when exists (
+            select 1 from public.organization_permissions op
+            where op.organization_id = org_id
+              and op.permission_type in ('player_org', 'mission_creator', 'reward_creator')
+              and op.status = 'approved'
+          ) then 'active'
+          else 'pending' 
+        end
       );
       
       -- Set active organization
@@ -184,6 +193,7 @@ begin
     end if;
     
     -- Handle multiple permission types for admin
+    -- Default to requesting basic player management capability
     user_roles_array := string_to_array(
       coalesce(new.raw_user_meta_data->>'permission_types', 'player_org'), 
       ','
