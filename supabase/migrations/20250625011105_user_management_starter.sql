@@ -138,6 +138,11 @@ begin
   -- Get user type from metadata, default to 'player' if not provided
   user_type := coalesce(new.raw_user_meta_data->>'user_type', 'player');
   
+  -- Security: Validate user_type against allowed values
+  if user_type not in ('player', 'admin') then
+    raise exception 'Invalid user_type: %. Only "player" and "admin" are allowed.', user_type;
+  end if;
+  
   -- Security: Prevent unauthorized cin_admin creation via public signup
   -- CIN admins can only be created through the Supabase dashboard
   if user_type = 'cin_admin' then
@@ -170,8 +175,16 @@ begin
       -- Create new organization if no org_id provided
       org_name := new.raw_user_meta_data->>'organization_name';
       if org_name is not null then
+        -- Security: Validate organization name length
+        if length(trim(org_name)) < 2 then
+          raise exception 'Organization name must be at least 2 characters long.';
+        end if;
+        if length(org_name) > 100 then
+          raise exception 'Organization name cannot exceed 100 characters.';
+        end if;
+        
         insert into public.organizations (name, contact_email)
-        values (org_name, new.email)
+        values (trim(org_name), new.email)
         returning id into org_id;
       end if;
     end if;
@@ -208,19 +221,25 @@ begin
     -- Create organization permission requests for each type
     foreach role_item in array user_roles_array
     loop
-      insert into public.organization_permissions (
-        organization_id, 
-        permission_type, 
-        status,
-        requested_by
-      ) 
-      values (
-        org_id, 
-        role_item::public.organization_permission_type,
-        case when (new.raw_user_meta_data->>'organization_id') is not null then 'approved' else 'pending' end,
-        new.id
-      )
-      on conflict (organization_id, permission_type) do nothing;
+      -- Security: Validate permission type
+      begin
+        insert into public.organization_permissions (
+          organization_id, 
+          permission_type, 
+          status,
+          requested_by
+        ) 
+        values (
+          org_id, 
+          trim(role_item)::public.organization_permission_type,
+          case when (new.raw_user_meta_data->>'organization_id') is not null then 'approved' else 'pending' end,
+          new.id
+        )
+        on conflict (organization_id, permission_type) do nothing;
+      exception
+        when invalid_text_representation then
+          raise exception 'Invalid permission type: %. Valid types are: player_org, mission_creator, reward_creator', trim(role_item);
+      end;
     end loop;
     
     -- Assign org_admin role to the user for this organization
@@ -268,5 +287,23 @@ insert into storage.buckets (id, name)
 create policy "Avatar images are publicly accessible." on storage.objects
   for select using (bucket_id = 'avatars');
 
-create policy "Anyone can upload an avatar." on storage.objects
-  for insert with check (bucket_id = 'avatars');
+create policy "Only authenticated users can upload avatars." on storage.objects
+  for insert with check (
+    bucket_id = 'avatars' 
+    and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] = (select auth.uid()::text)
+  );
+
+create policy "Users can update their own avatars." on storage.objects
+  for update using (
+    bucket_id = 'avatars' 
+    and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] = (select auth.uid()::text)
+  );
+
+create policy "Users can delete their own avatars." on storage.objects
+  for delete using (
+    bucket_id = 'avatars' 
+    and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] = (select auth.uid()::text)
+  );

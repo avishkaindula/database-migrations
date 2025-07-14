@@ -95,8 +95,9 @@ begin
           user_roles_jwt, 
           case 
             when organization_id is null then '$[*] ? (@.scope == "global").role'
-            else '$[*] ? (@.scope == "organization" && @.organization_id == "' || organization_id || '").role'
-          end
+            else '$[*] ? (@.scope == "organization" && @.organization_id == $org_id).role'
+          end,
+          jsonb_build_object('org_id', organization_id::text)
         )
       )
     );
@@ -131,7 +132,8 @@ begin
     if bind_permissions > 0 then
       if not jsonb_path_exists(
         user_roles_jwt, 
-        '$[*] ? (@.scope == "organization" && @.organization_id == "' || organization_id || '" && @.role == "org_admin")'
+        '$[*] ? (@.scope == "organization" && @.organization_id == $org_id && @.role == "org_admin")',
+        jsonb_build_object('org_id', organization_id::text)
       ) then
         bind_permissions := 0;
       end if;
@@ -178,7 +180,8 @@ begin
   
   return jsonb_path_exists(
     user_orgs_jwt, 
-    '$[*] ? (@.id == "' || organization_id || '" && @.membership_status == "active")'
+    '$[*] ? (@.id == $org_id && @.membership_status == "active")',
+    jsonb_build_object('org_id', organization_id::text)
   );
 end;
 $$ language plpgsql stable security definer set search_path = '';
@@ -200,7 +203,8 @@ begin
   
   return jsonb_path_exists(
     user_roles_jwt, 
-    '$[*] ? (@.scope == "organization" && @.organization_id == "' || organization_id || '" && @.role == "' || role_name || '")'
+    '$[*] ? (@.scope == "organization" && @.organization_id == $org_id && @.role == $role)',
+    jsonb_build_object('org_id', organization_id::text, 'role', role_name::text)
   );
 end;
 $$ language plpgsql stable security definer set search_path = '';
@@ -249,6 +253,21 @@ INSERT INTO public.role_permissions (role, permission) VALUES
   -- Org Admin permissions (organization-scoped, but also checked via organization_permissions)
   ('org_admin', 'manage_organization'),
   ('org_admin', 'manage_players');
+
+-- Set up Row Level Security (RLS) for role_permissions
+alter table role_permissions enable row level security;
+
+-- RLS Policies for role_permissions
+create policy "Role permissions are viewable by authenticated users." on role_permissions
+  for select using (true); -- This is reference data that needs to be readable
+
+create policy "Only CIN admins can manage role permissions." on role_permissions
+  for all using (exists (
+    select 1 from public.user_roles ur
+    where ur.user_id = (select auth.uid())
+    and ur.role = 'cin_admin'
+    and ur.organization_id is null
+  ));
 
 -- Set up Row Level Security (RLS) for user_roles
 alter table user_roles enable row level security;
