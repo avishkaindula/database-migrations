@@ -20,13 +20,10 @@ begin
     return new;
   end if;
   
-  -- Get user type from metadata (required for API signups)
-  user_type := new.raw_user_meta_data->>'user_type';
+  -- Get user type from metadata (defaults to "player" for public signups)
+  user_type := coalesce(new.raw_user_meta_data->>'user_type', 'player');
   
-  -- Security: user_type is required for API signups
-  if user_type is null then
-    raise exception 'user_type is required in signup metadata. Valid values: "player", "admin"';
-  end if;
+  -- Note: If no user_type is provided, we default to "player" for public signups
   
   -- Security: Validate user_type against allowed values
   if user_type not in ('player', 'admin') then
