@@ -138,6 +138,12 @@ begin
   -- Get user type from metadata, default to 'player' if not provided
   user_type := coalesce(new.raw_user_meta_data->>'user_type', 'player');
   
+  -- Security: Prevent unauthorized cin_admin creation via public signup
+  -- CIN admins can only be created through the Supabase dashboard
+  if user_type = 'cin_admin' then
+    raise exception 'CIN admin accounts cannot be created through public signup. Contact system administrator.';
+  end if;
+  
   if user_type = 'admin' then
     -- Insert into admins table
     insert into public.admins (

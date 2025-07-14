@@ -249,3 +249,52 @@ INSERT INTO public.role_permissions (role, permission) VALUES
   -- Org Admin permissions (organization-scoped, but also checked via organization_permissions)
   ('org_admin', 'manage_organization'),
   ('org_admin', 'manage_players');
+
+-- Set up Row Level Security (RLS) for user_roles
+alter table user_roles enable row level security;
+
+-- RLS Policies for user_roles
+create policy "Users can view their own roles." on user_roles
+  for select using (user_id = (select auth.uid()));
+
+create policy "Only CIN admins can manage user roles." on user_roles
+  for all using (exists (
+    select 1 from public.user_roles ur
+    where ur.user_id = (select auth.uid())
+    and ur.role = 'cin_admin'
+    and ur.organization_id is null
+  ));
+
+-- Set up Row Level Security (RLS) for organization_permissions  
+alter table organization_permissions enable row level security;
+
+-- RLS Policies for organization_permissions
+create policy "Users can view organization permissions." on organization_permissions
+  for select using (
+    -- Requesters can see their own requests
+    requested_by = (select auth.uid()) or
+    -- Org admins can see permissions for their organizations
+    exists (
+      select 1 from public.admin_memberships am
+      join public.user_roles ur on am.admin_id = ur.user_id
+      where am.organization_id = organization_permissions.organization_id
+        and ur.user_id = (select auth.uid())
+        and ur.role = 'org_admin'
+        and am.status = 'active'
+    ) or
+    -- CIN admins can see all
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = (select auth.uid())
+      and ur.role = 'cin_admin'
+      and ur.organization_id is null
+    )
+  );
+
+create policy "Only CIN admins can manage organization permissions." on organization_permissions
+  for all using (exists (
+    select 1 from public.user_roles ur
+    where ur.user_id = (select auth.uid())
+    and ur.role = 'cin_admin'
+    and ur.organization_id is null
+  ));
