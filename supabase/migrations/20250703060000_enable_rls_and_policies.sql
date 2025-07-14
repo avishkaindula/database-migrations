@@ -18,13 +18,20 @@ alter table organization_permissions enable row level security;
 create policy "Organizations are viewable by everyone." on organizations
   for select using (true);
 
-create policy "Only CIN admins can create organizations." on organizations
-  for insert with check (exists (
-    select 1 from public.user_roles 
-    where user_id = (select auth.uid()) 
-    and role = 'cin_admin'
-    and organization_id is null
-  ));
+create policy "CIN admins and new admin users can create organizations." on organizations
+  for insert with check (
+    -- CIN admins can always create organizations
+    exists (
+      select 1 from public.user_roles 
+      where user_id = (select auth.uid()) 
+      and role = 'cin_admin'
+      and organization_id is null
+    ) or
+    -- New admin users can create organizations during signup (no user_roles entry yet)
+    (auth.role() = 'authenticated' and not exists (
+      select 1 from public.user_roles where user_id = (select auth.uid())
+    ))
+  );
 
 create policy "Org admins and CIN admins can update organizations." on organizations
   for update using (exists (
