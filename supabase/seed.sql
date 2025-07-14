@@ -237,6 +237,50 @@ BEGIN
     
     RAISE NOTICE '✅ Step 7: Created identity record';
     
+    -- Step 8: Grant all organization permission types to CIN organization
+    INSERT INTO public.organization_permissions (
+        organization_id,
+        permission_type,
+        status,
+        requested_by,
+        reviewed_by,
+        reviewed_at,
+        created_at,
+        updated_at
+    ) VALUES 
+    (
+        cin_org_id,
+        'player_org',
+        'approved',              -- Pre-approved for CIN organization
+        cin_admin_uuid,          -- Requested by CIN admin
+        cin_admin_uuid,          -- Auto-approved by CIN admin
+        NOW(),
+        NOW(),
+        NOW()
+    ),
+    (
+        cin_org_id,
+        'mission_creator',
+        'approved',              -- Pre-approved for CIN organization
+        cin_admin_uuid,          -- Requested by CIN admin
+        cin_admin_uuid,          -- Auto-approved by CIN admin
+        NOW(),
+        NOW(),
+        NOW()
+    ),
+    (
+        cin_org_id,
+        'reward_creator',
+        'approved',              -- Pre-approved for CIN organization
+        cin_admin_uuid,          -- Requested by CIN admin
+        cin_admin_uuid,          -- Auto-approved by CIN admin
+        NOW(),
+        NOW(),
+        NOW()
+    );
+    
+    RAISE NOTICE '✅ Step 8: Granted all organization permissions to CIN organization';
+    
     -- Final verification
     RAISE NOTICE '';
     RAISE NOTICE '🎉 CIN ORGANIZATION & ADMIN CREATED SUCCESSFULLY! 🎉';
@@ -258,6 +302,11 @@ BEGIN
     RAISE NOTICE '   - Can manage all organizations globally';
     RAISE NOTICE '   - Can create/manage missions and rewards globally';
     RAISE NOTICE '   - Admin of The Climate Intelligence Network organization';
+    RAISE NOTICE '';
+    RAISE NOTICE '🏢 CIN Organization Capabilities:';
+    RAISE NOTICE '   - Player Organization (can have players join)';
+    RAISE NOTICE '   - Mission Creator (can create and manage missions)';
+    RAISE NOTICE '   - Reward Creator (can create and manage rewards)';
     RAISE NOTICE '';
     RAISE NOTICE '⚠️  IMPORTANT: Store the password securely!';
     RAISE NOTICE '';
