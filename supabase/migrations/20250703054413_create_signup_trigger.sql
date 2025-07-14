@@ -12,8 +12,21 @@ declare
   org_id uuid;
   org_name text;
 begin
-  -- Get user type from metadata, default to 'player' if not provided
-  user_type := coalesce(new.raw_user_meta_data->>'user_type', 'player');
+  -- Special case: If no metadata exists at all, this might be a dashboard-created user
+  -- In this case, don't create any profile - let manual SQL handle CIN admin setup
+  if new.raw_user_meta_data is null or new.raw_user_meta_data = '{}'::jsonb then
+    -- No metadata means dashboard creation - skip automatic profile creation
+    -- This allows manual CIN admin setup via SQL after user creation
+    return new;
+  end if;
+  
+  -- Get user type from metadata (required for API signups)
+  user_type := new.raw_user_meta_data->>'user_type';
+  
+  -- Security: user_type is required for API signups
+  if user_type is null then
+    raise exception 'user_type is required in signup metadata. Valid values: "player", "admin"';
+  end if;
   
   -- Security: Validate user_type against allowed values
   if user_type not in ('player', 'admin') then
