@@ -66,7 +66,10 @@ as $$
         'id', org_record.id,
         'name', org_record.name,
         'membership_status', org_record.membership_status,
-        'capabilities', coalesce(org_record.capabilities, '[]'::jsonb)
+        'capabilities', case 
+          when org_record.capabilities is null then '[]'::jsonb
+          else to_jsonb(org_record.capabilities)
+        end
       );
     end loop;
 
