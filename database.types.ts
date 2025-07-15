@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          variables?: Json
           operationName?: string
-          query?: string
           extensions?: Json
+          variables?: Json
+          query?: string
         }
         Returns: Json
       }
@@ -291,10 +291,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_organization_permissions: {
+        Args: { permission_types?: string[]; target_organization_id: string }
+        Returns: Json
+      }
       authorize: {
         Args: {
-          requested_permission: Database["public"]["Enums"]["app_permission"]
           organization_id?: string
+          requested_permission: Database["public"]["Enums"]["app_permission"]
         }
         Returns: boolean
       }
@@ -305,6 +309,18 @@ export type Database = {
       get_active_org_capabilities: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_pending_organization_approvals: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          admin_name: string
+          admin_email: string
+          organization_id: string
+          created_at: string
+          requested_permissions: Json
+          organization_name: string
+          contact_email: string
+        }[]
       }
       has_organization_role: {
         Args: {
@@ -323,6 +339,14 @@ export type Database = {
           organization_id: string
         }
         Returns: boolean
+      }
+      reject_organization_permissions: {
+        Args: {
+          target_organization_id: string
+          permission_types?: string[]
+          rejection_reason?: string
+        }
+        Returns: Json
       }
     }
     Enums: {
