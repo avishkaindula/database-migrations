@@ -1,9 +1,9 @@
 -- Helper functions for organization approval and management
 
--- Function to approve organization permissions (for CIN admins)
-create or replace function public.approve_organization_permissions(
+-- Function to approve organization privileges (for CIN admins)
+create or replace function public.approve_organization_privileges(
   target_organization_id uuid,
-  permission_types text[] default null  -- If null, approves all pending permissions
+  privilege_types text[] default null  -- If null, approves all pending privileges
 )
 returns jsonb as $$
 declare
@@ -19,10 +19,10 @@ begin
     and ur.role = 'cin_admin' 
     and ur.organization_id is null
   ) then
-    raise exception 'Only CIN admins can approve organization permissions';
+    raise exception 'Only CIN admins can approve organization privileges';
   end if;
   
-  -- Approve specified permissions or all pending ones
+  -- Approve specified privileges or all pending ones
   update public.organization_permissions
   set 
     status = 'approved',
@@ -31,11 +31,11 @@ begin
     updated_at = now()
   where organization_id = target_organization_id
     and status = 'pending'
-    and (permission_types is null or permission_type = any(permission_types));
+    and (privilege_types is null or permission_type = any(privilege_types));
   
   get diagnostics approved_count = row_count;
   
-  -- Also activate the admin membership if approving any permissions
+  -- Also activate the admin membership if approving any privileges
   if approved_count > 0 then
     update public.admin_memberships
     set 
@@ -48,7 +48,7 @@ begin
   -- Return result
   result := jsonb_build_object(
     'success', true,
-    'approved_permissions_count', approved_count,
+    'approved_privileges_count', approved_count,
     'organization_id', target_organization_id
   );
   
@@ -56,10 +56,10 @@ begin
 end;
 $$ language plpgsql security definer set search_path = '';
 
--- Function to reject organization permissions
-create or replace function public.reject_organization_permissions(
+-- Function to reject organization privileges
+create or replace function public.reject_organization_privileges(
   target_organization_id uuid,
-  permission_types text[] default null,  -- If null, rejects all pending permissions
+  privilege_types text[] default null,  -- If null, rejects all pending privileges
   rejection_reason text default null
 )
 returns jsonb as $$
@@ -76,10 +76,10 @@ begin
     and ur.role = 'cin_admin' 
     and ur.organization_id is null
   ) then
-    raise exception 'Only CIN admins can reject organization permissions';
+    raise exception 'Only CIN admins can reject organization privileges';
   end if;
   
-  -- Reject specified permissions or all pending ones
+  -- Reject specified privileges or all pending ones
   update public.organization_permissions
   set 
     status = 'rejected',
@@ -88,14 +88,14 @@ begin
     updated_at = now()
   where organization_id = target_organization_id
     and status = 'pending'
-    and (permission_types is null or permission_type = any(permission_types));
+    and (privilege_types is null or permission_type = any(privilege_types));
   
   get diagnostics rejected_count = row_count;
   
   -- Return result
   result := jsonb_build_object(
     'success', true,
-    'rejected_permissions_count', rejected_count,
+    'rejected_privileges_count', rejected_count,
     'organization_id', target_organization_id,
     'reason', rejection_reason
   );
@@ -112,7 +112,7 @@ returns table (
   contact_email text,
   admin_name text,
   admin_email text,
-  requested_permissions jsonb,
+  requested_privileges jsonb,
   created_at timestamptz
 ) as $$
 begin
@@ -125,10 +125,10 @@ begin
     a.email as admin_email,
     jsonb_agg(
       jsonb_build_object(
-        'permission_type', op.permission_type,
+        'privilege_type', op.permission_type,
         'requested_at', op.created_at
       )
-    ) as requested_permissions,
+    ) as requested_privileges,
     min(op.created_at) as created_at
   from public.organizations o
   join public.organization_permissions op on o.id = op.organization_id
@@ -140,6 +140,6 @@ end;
 $$ language plpgsql security definer set search_path = '';
 
 -- Grant execute permissions to authenticated users (with RLS)
-grant execute on function public.approve_organization_permissions to authenticated;
-grant execute on function public.reject_organization_permissions to authenticated;
+grant execute on function public.approve_organization_privileges to authenticated;
+grant execute on function public.reject_organization_privileges to authenticated;
 grant execute on function public.get_pending_organization_approvals to authenticated;

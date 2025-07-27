@@ -15,7 +15,7 @@ This repository contains the database schema and migrations for the Climate Inte
 
 ## System Overview
 
-The Climate Intelligence Network uses a role-based permission system with three main user types and organization-level capabilities.
+The Climate Intelligence Network uses a role-based permission system with three main user types and organization-level privileges.
 
 ### User Roles
 
@@ -23,13 +23,13 @@ The Climate Intelligence Network uses a role-based permission system with three 
 2. **`org_admin`** - Organization administrators who manage their organization's activities
 3. **`cin_admin`** - Global system administrators who approve organizations and manage the entire network
 
-### Organization Permission Types
+### Organization Privilege Types
 
-Organizations can request and be granted different capabilities:
+Organizations can request and be granted different privileges:
 
-- **`player_org`** - Can have players join and manage player activities
-- **`mission_creator`** - Can create and manage climate action missions
-- **`reward_creator`** - Can create and distribute rewards for mission completion
+- **`mobilizing_partners`** - Can mobilize and coordinate partner organizations
+- **`mission_partners`** - Can create and manage climate action missions
+- **`reward_partners`** - Can create and distribute rewards for mission completion
 
 ## Organization Signup and Activation Flow
 
@@ -48,7 +48,7 @@ const { error } = await supabase.auth.signUp({
       phone: '+1-555-0123',
       address: '123 Main St, City, State',
       organization_name: 'New Organization Name',  // Creates new org
-      permission_types: 'player_org,mission_creator,reward_creator'  // Requested permissions
+      permission_types: 'mobilizing_partners,mission_partners,reward_partners'  // Requested privileges
     }
   }
 })
@@ -80,21 +80,21 @@ CIN admins can approve organizations using helper functions:
 // Get all pending organization approvals
 const { data: pending } = await supabase.rpc('get_pending_organization_approvals')
 
-// Approve all requested permissions for an organization
-const { data: result } = await supabase.rpc('approve_organization_permissions', {
+// Approve all requested privileges for an organization
+const { data: result } = await supabase.rpc('approve_organization_privileges', {
   target_organization_id: 'org-uuid-here'
 })
 
-// Approve only specific permissions
-const { data: result } = await supabase.rpc('approve_organization_permissions', {
+// Approve only specific privileges
+const { data: result } = await supabase.rpc('approve_organization_privileges', {
   target_organization_id: 'org-uuid-here',
-  permission_types: ['player_org', 'mission_creator']
+  privilege_types: ['mobilizing_partners', 'mission_partners']
 })
 
-// Reject permissions
-const { data: result } = await supabase.rpc('reject_organization_permissions', {
+// Reject privileges
+const { data: result } = await supabase.rpc('reject_organization_privileges', {
   target_organization_id: 'org-uuid-here',
-  permission_types: ['reward_creator'],
+  privilege_types: ['reward_partners'],
   rejection_reason: 'Insufficient documentation provided'
 })
 ```
@@ -139,10 +139,10 @@ The seed script automatically creates:
    - UUID: `f47ac10b-58cc-4372-a567-0e02b2c3d479`
    - **Both Global CIN Admin and CIN Organization Admin roles**
 
-3. **CIN Organization Permissions** (Pre-approved)
-   - `player_org` - Can have players join
-   - `mission_creator` - Can create missions
-   - `reward_creator` - Can create rewards
+3. **CIN Organization Privileges** (Pre-approved)
+   - `mobilizing_partners` - Can mobilize partner organizations
+   - `mission_partners` - Can create missions
+   - `reward_partners` - Can create rewards
 
 **⚠️ Important**: Change the default credentials in `seed.sql` before deploying to production!
 
@@ -204,8 +204,8 @@ The database schema is built through these migration files (applied in order):
    - Optimized policies to avoid multiple permissive rules
 
 6. **`20250715000000_add_organization_approval_functions.sql`** (Helper functions)
-   - `approve_organization_permissions()` - Approve organization capabilities
-   - `reject_organization_permissions()` - Reject organization requests  
+   - `approve_organization_privileges()` - Approve organization privileges
+   - `reject_organization_privileges()` - Reject organization requests  
    - `get_pending_organization_approvals()` - List pending approvals for CIN admin dashboard
 
 ## Database Schema Key Tables
@@ -215,7 +215,7 @@ The database schema is built through these migration files (applied in order):
 - **`players`** - Player profiles
 - **`admin_memberships`** - Links admins to organizations with status
 - **`user_roles`** - Assigns roles to users (globally or per-organization)
-- **`organization_permissions`** - Tracks requested/approved capabilities per organization
+- **`organization_permissions`** - Tracks requested/approved privileges per organization
 - **`role_permissions`** - Defines what each role can do
 
 ## Automated User Processing
@@ -249,7 +249,7 @@ The system automatically processes new user signups based on the `raw_user_meta_
 Automatically adds user context to JWT tokens:
 
 - User roles (global and organization-scoped)
-- Organization memberships and capabilities
+- Organization memberships and privileges
 - Active organization ID
 - Used for client-side authorization and RLS policies
 
@@ -305,10 +305,10 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
       "id": "00000000-1111-2222-3333-444444444444",
       "name": "The Climate Intelligence Network",
       "membership_status": "active",
-      "capabilities": [
-        {"type": "player_org", "status": "approved"},
-        {"type": "mission_creator", "status": "approved"},
-        {"type": "reward_creator", "status": "approved"}
+      "privileges": [
+        {"type": "mobilizing_partners", "status": "approved"},
+        {"type": "mission_partners", "status": "approved"},
+        {"type": "reward_partners", "status": "approved"}
       ]
     }
   ],
@@ -362,10 +362,10 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
       "id": "111a222b-333c-444d-555e-666f777g888h",
       "name": "Eco Alliance", 
       "membership_status": "active",
-      "capabilities": [
-        {"type": "player_org", "status": "approved"},
-        {"type": "mission_creator", "status": "approved"},
-        {"type": "reward_creator", "status": "rejected"}
+      "privileges": [
+        {"type": "mobilizing_partners", "status": "approved"},
+        {"type": "mission_partners", "status": "approved"},
+        {"type": "reward_partners", "status": "rejected"}
       ]
     }
   ],
@@ -404,17 +404,17 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
       "id": "aaa1111b-222c-333d-444e-555f666g777h",
       "name": "Climate Consultants",
       "membership_status": "active", 
-      "capabilities": [
-        {"type": "player_org", "status": "approved"},
-        {"type": "mission_creator", "status": "approved"}
+      "privileges": [
+        {"type": "mobilizing_partners", "status": "approved"},
+        {"type": "mission_partners", "status": "approved"}
       ]
     },
     {
       "id": "bbb2222c-333d-444e-555f-666g777h888i",
       "name": "Green Solutions Inc",
       "membership_status": "active",
-      "capabilities": [
-        {"type": "player_org", "status": "approved"}
+      "privileges": [
+        {"type": "mobilizing_partners", "status": "approved"}
       ]
     }
   ],
@@ -448,17 +448,17 @@ const isOrgAdmin = (orgId) => userRoles.some(role =>
   role.organization_id === orgId
 )
 
-// Get organization capabilities
-const getOrgCapabilities = (orgId) => {
+// Get organization privileges
+const getOrgPrivileges = (orgId) => {
   const org = userOrganizations.find(o => o.id === orgId)
-  return org?.capabilities || []
+  return org?.privileges || []
 }
 
-// Check if organization has specific approved capability
-const hasApprovedCapability = (orgId, capabilityType) => {
-  const capabilities = getOrgCapabilities(orgId)
-  return capabilities.some(cap => 
-    cap.type === capabilityType && cap.status === 'approved'
+// Check if organization has specific approved privilege
+const hasApprovedPrivilege = (orgId, privilegeType) => {
+  const privileges = getOrgPrivileges(orgId)
+  return privileges.some(priv =>
+    priv.type === privilegeType && priv.status === 'approved'
   )
 }
 ```
@@ -482,7 +482,7 @@ values (new.id, org_id,
     when exists (
       select 1 from public.organization_permissions op
       where op.organization_id = org_id
-        and op.permission_type in ('player_org', 'mission_creator', 'reward_creator')
+        and op.permission_type in ('mobilizing_partners', 'mission_partners', 'reward_partners')
         and op.status = 'approved'
     ) then 'active'
     else 'pending' 
@@ -492,7 +492,7 @@ values (new.id, org_id,
 
 **Scenarios for immediate `'active'` status:**
 - **Joining existing organization**: User provides `organization_id` in signup metadata
-- **Creating new org with pre-approved permissions**: Rare edge case where organization already exists with approved capabilities
+- **Creating new org with pre-approved privileges**: Rare edge case where organization already exists with approved privileges
 
 #### 2. **During CIN Admin Approval** (Pending → Active)
 
@@ -524,7 +524,7 @@ if approved_count > 0 then
 end if;
 ```
 
-**Key Point**: As soon as ANY capability gets approved, membership becomes `'active'`!
+**Key Point**: As soon as ANY privilege gets approved, membership becomes `'active'`!
 
 ### JWT Auth Hook Filtering
 
@@ -543,7 +543,7 @@ for org_record in
         'type', op.permission_type,
         'status', op.status
       )
-    ) filter (where op.permission_type is not null) as capabilities
+    ) filter (where op.permission_type is not null) as privileges
   from public.admin_memberships am
   join public.organizations o on am.organization_id = o.id
   left join public.organization_permissions op on op.organization_id = o.id
@@ -560,10 +560,10 @@ end loop;
 #### Example 1: Partial Approval Makes Membership Active
 
 ```javascript
-// CIN admin approves only one capability
-const { data: result } = await supabase.rpc('approve_organization_permissions', {
+// CIN admin approves only one privilege
+const { data: result } = await supabase.rpc('approve_organization_privileges', {
   target_organization_id: 'org-uuid',
-  permission_types: ['player_org']  // Only approve this one
+  privilege_types: ['mobilizing_partners']  // Only approve this one
 })
 ```
 
@@ -575,9 +575,9 @@ organization_id: org-uuid
 status: 'active'  -- ✅ Changed from 'pending' to 'active'
 
 -- organization_permissions table
-org-uuid | player_org      | approved  -- ✅ Approved
-org-uuid | mission_creator | pending   -- ❌ Still pending
-org-uuid | reward_creator  | pending   -- ❌ Still pending
+org-uuid | mobilizing_partners | approved  -- ✅ Approved
+org-uuid | mission_partners    | pending   -- ❌ Still pending
+org-uuid | reward_partners     | pending   -- ❌ Still pending
 ```
 
 **Resulting JWT token:**
@@ -588,10 +588,10 @@ org-uuid | reward_creator  | pending   -- ❌ Still pending
       "id": "org-uuid",
       "name": "Organization Name", 
       "membership_status": "active",
-      "capabilities": [
-        {"type": "player_org", "status": "approved"},
-        {"type": "mission_creator", "status": "pending"},
-        {"type": "reward_creator", "status": "pending"}
+      "privileges": [
+        {"type": "mobilizing_partners", "status": "approved"},
+        {"type": "mission_partners", "status": "pending"},
+        {"type": "reward_partners", "status": "pending"}
       ]
     }
   ]
@@ -601,10 +601,10 @@ org-uuid | reward_creator  | pending   -- ❌ Still pending
 #### Example 2: No Approvals = Still Pending
 
 ```javascript
-// CIN admin only rejects capabilities
-const { data: result } = await supabase.rpc('reject_organization_permissions', {
+// CIN admin only rejects privileges
+const { data: result } = await supabase.rpc('reject_organization_privileges', {
   target_organization_id: 'org-uuid',
-  permission_types: ['mission_creator']
+  privilege_types: ['mission_partners']
 })
 ```
 
@@ -616,9 +616,9 @@ organization_id: org-uuid
 status: 'pending'  -- ❌ Still pending (no approvals happened)
 
 -- organization_permissions table  
-org-uuid | player_org      | pending   -- ❌ Still pending
-org-uuid | mission_creator | rejected  -- ❌ Rejected
-org-uuid | reward_creator  | pending   -- ❌ Still pending
+org-uuid | mobilizing_partners | pending   -- ❌ Still pending
+org-uuid | mission_partners    | rejected  -- ❌ Rejected
+org-uuid | reward_partners     | pending   -- ❌ Still pending
 ```
 
 **Resulting JWT token:**
@@ -642,34 +642,34 @@ const isFullyPending = !userOrganizations.length && activeOrgId
 
 // Organization has partial approvals  
 const hasPartialApprovals = userOrganizations.some(org =>
-  org.capabilities.some(cap => cap.status === 'pending') &&
-  org.capabilities.some(cap => cap.status === 'approved')
+  org.privileges.some(priv => priv.status === 'pending') &&
+  org.privileges.some(priv => priv.status === 'approved')
 )
 
 // Organization has rejections
 const hasRejections = userOrganizations.some(org =>
-  org.capabilities.some(cap => cap.status === 'rejected')
+  org.privileges.some(priv => priv.status === 'rejected')
 )
 
 // Organization is fully approved
 const isFullyApproved = userOrganizations.some(org =>
-  org.capabilities.every(cap => cap.status === 'approved')
+  org.privileges.every(priv => priv.status === 'approved')
 )
 
-// Check specific capability
-const hasApprovedCapability = (orgId, capabilityType) => {
+// Check specific privilege
+const hasApprovedPrivilege = (orgId, privilegeType) => {
   const org = userOrganizations.find(o => o.id === orgId)
-  return org?.capabilities.some(cap => 
-    cap.type === capabilityType && cap.status === 'approved'
+  return org?.privileges.some(priv => 
+    priv.type === privilegeType && priv.status === 'approved'
   ) || false
 }
 ```
 
 ### Summary: The Key Rule
 
-> **Any approved capability = Active membership = Organization appears in JWT**
+> **Any approved privilege = Active membership = Organization appears in JWT**
 
 This design ensures:
 1. **Security**: Users can't access organization features until at least something is approved
 2. **Flexibility**: Organizations can start with basic permissions and request more later
-3. **Transparency**: JWT clearly shows what capabilities are approved/pending/rejected
+3. **Transparency**: JWT clearly shows what privileges are approved/pending/rejected

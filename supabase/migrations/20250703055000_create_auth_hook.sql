@@ -43,7 +43,7 @@ as $$
       end if;
     end loop;
 
-    -- Fetch user organizations with membership status and capabilities
+    -- Fetch user organizations with membership status and privileges
     for org_record in 
       select 
         o.id, 
@@ -54,7 +54,7 @@ as $$
             'type', op.permission_type,
             'status', op.status
           )
-        ) filter (where op.permission_type is not null) as capabilities
+        ) filter (where op.permission_type is not null) as privileges
       from public.admin_memberships am
       join public.organizations o on am.organization_id = o.id
       left join public.organization_permissions op on op.organization_id = o.id
@@ -66,9 +66,9 @@ as $$
         'id', org_record.id,
         'name', org_record.name,
         'membership_status', org_record.membership_status,
-        'capabilities', case 
-          when org_record.capabilities is null then '[]'::jsonb
-          else to_jsonb(org_record.capabilities)
+        'privileges', case 
+          when org_record.privileges is null then '[]'::jsonb
+          else to_jsonb(org_record.privileges)
         end
       );
     end loop;

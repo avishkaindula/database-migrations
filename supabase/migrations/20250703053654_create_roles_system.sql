@@ -19,9 +19,9 @@ create type public.app_role as enum (
 );
 
 create type public.organization_permission_type as enum (
-  'player_org',
-  'mission_creator', 
-  'reward_creator'
+  'mobilizing_partners',
+  'mission_partners', 
+  'reward_partners'
 );
 
 -- USER ROLES
@@ -58,7 +58,7 @@ create table public.organization_permissions (
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique (organization_id, permission_type)
 );
-comment on table public.organization_permissions is 'Organization permission requests and approvals for different capabilities.';
+comment on table public.organization_permissions is 'Organization permission requests and approvals for different privileges.';
 
 -- AUTHORIZATION FUNCTION
 create or replace function public.authorize(
@@ -104,7 +104,7 @@ begin
       )
     );
   
-  -- Also check if organization has the required capability (for org-specific permissions)
+  -- Also check if organization has the required privilege (for org-specific permissions)
   if bind_permissions = 0 and organization_id is not null then
     -- Check if the organization has approved permissions for mission/reward operations
     if requested_permission in ('create_missions', 'manage_missions') then
@@ -112,21 +112,21 @@ begin
       into bind_permissions
       from public.organization_permissions op
       where op.organization_id = authorize.organization_id
-        and op.permission_type = 'mission_creator'
+        and op.permission_type = 'mission_partners'
         and op.status = 'approved';
     elsif requested_permission in ('create_rewards', 'manage_rewards') then
       select count(*)
       into bind_permissions
       from public.organization_permissions op
       where op.organization_id = authorize.organization_id
-        and op.permission_type = 'reward_creator'
+        and op.permission_type = 'reward_partners'
         and op.status = 'approved';
     elsif requested_permission in ('manage_organization', 'manage_players') then
       select count(*)
       into bind_permissions
       from public.organization_permissions op
       where op.organization_id = authorize.organization_id
-        and op.permission_type = 'player_org'
+        and op.permission_type = 'mobilizing_partners'
         and op.status = 'approved';
     end if;
     
@@ -146,23 +146,23 @@ begin
 end;
 $$ language plpgsql stable security definer set search_path = '';
 
--- Helper function to check if organization has specific capability
-create or replace function public.organization_has_capability(
+-- Helper function to check if organization has specific privilege
+create or replace function public.organization_has_privilege(
   organization_id uuid,
-  capability organization_permission_type
+  privilege organization_permission_type
 )
 returns boolean as $$
 declare
-  has_capability boolean := false;
+  has_privilege boolean := false;
 begin
   select exists(
     select 1 from public.organization_permissions op
-    where op.organization_id = organization_has_capability.organization_id
-      and op.permission_type = capability
+    where op.organization_id = organization_has_privilege.organization_id
+      and op.permission_type = privilege
       and op.status = 'approved'
-  ) into has_capability;
+  ) into has_privilege;
   
-  return has_capability;
+  return has_privilege;
 end;
 $$ language plpgsql stable security definer set search_path = '';
 
@@ -211,32 +211,32 @@ begin
 end;
 $$ language plpgsql stable security definer set search_path = '';
 
--- Helper function to get user's active organization capabilities
-create or replace function public.get_active_org_capabilities()
+-- Helper function to get user's active organization privileges
+create or replace function public.get_active_org_privileges()
 returns jsonb as $$
 declare
   active_org_id uuid;
-  capabilities jsonb := '[]'::jsonb;
-  cap_record record;
+  privileges jsonb := '[]'::jsonb;
+  priv_record record;
 begin
   active_org_id := (auth.jwt() ->> 'active_organization_id')::uuid;
   
   if active_org_id is null then
-    return capabilities;
+    return privileges;
   end if;
   
-  for cap_record in
+  for priv_record in
     select permission_type, status
     from public.organization_permissions
     where organization_id = active_org_id
   loop
-    capabilities := capabilities || jsonb_build_object(
-      'type', cap_record.permission_type,
-      'status', cap_record.status
+    privileges := privileges || jsonb_build_object(
+      'type', priv_record.permission_type,
+      'status', priv_record.status
     );
   end loop;
   
-  return capabilities;
+  return privileges;
 end;
 $$ language plpgsql stable security definer set search_path = '';
 
