@@ -250,7 +250,7 @@ BEGIN
     ) VALUES 
     (
         cin_org_id,
-        'player_org',
+        'mobilizing_partners',
         'approved',              -- Pre-approved for CIN organization
         cin_admin_uuid,          -- Requested by CIN admin
         cin_admin_uuid,          -- Auto-approved by CIN admin
@@ -260,7 +260,7 @@ BEGIN
     ),
     (
         cin_org_id,
-        'mission_creator',
+        'mission_partners',
         'approved',              -- Pre-approved for CIN organization
         cin_admin_uuid,          -- Requested by CIN admin
         cin_admin_uuid,          -- Auto-approved by CIN admin
@@ -270,7 +270,7 @@ BEGIN
     ),
     (
         cin_org_id,
-        'reward_creator',
+        'reward_partners',
         'approved',              -- Pre-approved for CIN organization
         cin_admin_uuid,          -- Requested by CIN admin
         cin_admin_uuid,          -- Auto-approved by CIN admin
@@ -303,10 +303,10 @@ BEGIN
     RAISE NOTICE '   - Can create/manage missions and rewards globally';
     RAISE NOTICE '   - Admin of The Climate Intelligence Network organization';
     RAISE NOTICE '';
-    RAISE NOTICE '🏢 CIN Organization Capabilities:';
-    RAISE NOTICE '   - Player Organization (can have players join)';
-    RAISE NOTICE '   - Mission Creator (can create and manage missions)';
-    RAISE NOTICE '   - Reward Creator (can create and manage rewards)';
+    RAISE NOTICE '🏢 CIN Organization Privileges:';
+    RAISE NOTICE '   - Mobilizing Partners (can mobilize partner organizations)';
+    RAISE NOTICE '   - Mission Partners (can create and manage missions)';
+    RAISE NOTICE '   - Reward Partners (can create and manage rewards)';
     RAISE NOTICE '';
     RAISE NOTICE '⚠️  IMPORTANT: Store the password securely!';
     RAISE NOTICE '';

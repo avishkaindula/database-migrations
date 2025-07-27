@@ -291,8 +291,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      approve_organization_permissions: {
-        Args: { permission_types?: string[]; target_organization_id: string }
+      approve_organization_privileges: {
+        Args: { privilege_types?: string[]; target_organization_id: string }
         Returns: Json
       }
       authorize: {
@@ -306,7 +306,7 @@ export type Database = {
         Args: { event: Json }
         Returns: Json
       }
-      get_active_org_capabilities: {
+      get_active_org_privileges: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
@@ -333,17 +333,17 @@ export type Database = {
         Args: { organization_id: string }
         Returns: boolean
       }
-      organization_has_capability: {
+      organization_has_privilege: {
         Args: {
-          capability: Database["public"]["Enums"]["organization_permission_type"]
+          privilege: Database["public"]["Enums"]["organization_permission_type"]
           organization_id: string
         }
         Returns: boolean
       }
-      reject_organization_permissions: {
+      reject_organization_privileges: {
         Args: {
           target_organization_id: string
-          permission_types?: string[]
+          privilege_types?: string[]
           rejection_reason?: string
         }
         Returns: Json
@@ -361,9 +361,9 @@ export type Database = {
         | "manage_cin_admins"
       app_role: "player" | "cin_admin" | "org_admin"
       organization_permission_type:
-        | "player_org"
-        | "mission_creator"
-        | "reward_creator"
+        | "mobilizing_partners"
+        | "mission_partners"
+        | "reward_partners"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -494,9 +494,9 @@ export const Constants = {
       ],
       app_role: ["player", "cin_admin", "org_admin"],
       organization_permission_type: [
-        "player_org",
-        "mission_creator",
-        "reward_creator",
+        "mobilizing_partners",
+        "mission_partners",
+        "reward_partners",
       ],
     },
   },

@@ -125,7 +125,7 @@ begin
         on conflict (organization_id, permission_type) do nothing;
       exception
         when invalid_text_representation then
-          raise exception 'Invalid permission type: %. Valid types are: player_org, mission_creator, reward_creator', trim(role_item);
+          raise exception 'Invalid permission type: %. Valid types are: mobilizing_partners, mission_partners, reward_partners', trim(role_item);
       end;
     end loop;
     
