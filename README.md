@@ -543,7 +543,7 @@ for org_record in
         'type', op.permission_type,
         'status', op.status
       )
-    ) filter (where op.permission_type is not null) as capabilities
+    ) filter (where op.permission_type is not null) as privileges
   from public.admin_memberships am
   join public.organizations o on am.organization_id = o.id
   left join public.organization_permissions op on op.organization_id = o.id
@@ -588,10 +588,10 @@ org-uuid | reward_partners     | pending   -- ❌ Still pending
       "id": "org-uuid",
       "name": "Organization Name", 
       "membership_status": "active",
-      "capabilities": [
-        {"type": "player_org", "status": "approved"},
-        {"type": "mission_creator", "status": "pending"},
-        {"type": "reward_creator", "status": "pending"}
+      "privileges": [
+        {"type": "mobilizing_partners", "status": "approved"},
+        {"type": "mission_partners", "status": "pending"},
+        {"type": "reward_partners", "status": "pending"}
       ]
     }
   ]
@@ -601,10 +601,10 @@ org-uuid | reward_partners     | pending   -- ❌ Still pending
 #### Example 2: No Approvals = Still Pending
 
 ```javascript
-// CIN admin only rejects capabilities
-const { data: result } = await supabase.rpc('reject_organization_permissions', {
+// CIN admin only rejects privileges
+const { data: result } = await supabase.rpc('reject_organization_privileges', {
   target_organization_id: 'org-uuid',
-  permission_types: ['mission_creator']
+  privilege_types: ['mission_partners']
 })
 ```
 
@@ -616,9 +616,9 @@ organization_id: org-uuid
 status: 'pending'  -- ❌ Still pending (no approvals happened)
 
 -- organization_permissions table  
-org-uuid | player_org      | pending   -- ❌ Still pending
-org-uuid | mission_creator | rejected  -- ❌ Rejected
-org-uuid | reward_creator  | pending   -- ❌ Still pending
+org-uuid | mobilizing_partners | pending   -- ❌ Still pending
+org-uuid | mission_partners    | rejected  -- ❌ Rejected
+org-uuid | reward_partners     | pending   -- ❌ Still pending
 ```
 
 **Resulting JWT token:**

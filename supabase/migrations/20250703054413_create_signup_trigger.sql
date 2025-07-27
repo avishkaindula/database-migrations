@@ -85,7 +85,7 @@ begin
           when exists (
             select 1 from public.organization_permissions op
             where op.organization_id = org_id
-              and op.permission_type in ('player_org', 'mission_creator', 'reward_creator')
+              and op.permission_type in ('mobilizing_partners', 'mission_partners', 'reward_partners')
               and op.status = 'approved'
           ) then 'active'
           else 'pending' 
@@ -101,7 +101,7 @@ begin
     -- Handle multiple permission types for admin
     -- Default to requesting basic player management capability
     user_roles_array := string_to_array(
-      coalesce(new.raw_user_meta_data->>'permission_types', 'player_org'), 
+      coalesce(new.raw_user_meta_data->>'permission_types', 'mobilizing_partners'), 
       ','
     );
     

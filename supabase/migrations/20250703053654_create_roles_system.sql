@@ -112,21 +112,21 @@ begin
       into bind_permissions
       from public.organization_permissions op
       where op.organization_id = authorize.organization_id
-        and op.permission_type = 'mission_creator'
+        and op.permission_type = 'mission_partners'
         and op.status = 'approved';
     elsif requested_permission in ('create_rewards', 'manage_rewards') then
       select count(*)
       into bind_permissions
       from public.organization_permissions op
       where op.organization_id = authorize.organization_id
-        and op.permission_type = 'reward_creator'
+        and op.permission_type = 'reward_partners'
         and op.status = 'approved';
     elsif requested_permission in ('manage_organization', 'manage_players') then
       select count(*)
       into bind_permissions
       from public.organization_permissions op
       where op.organization_id = authorize.organization_id
-        and op.permission_type = 'player_org'
+        and op.permission_type = 'mobilizing_partners'
         and op.status = 'approved';
     end if;
     

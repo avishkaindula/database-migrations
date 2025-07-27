@@ -44,7 +44,7 @@ TABLE(organizations, "organizations") {
   website: varchar(255)
   contact_email: varchar(255)
   location: varchar(100)
-  is_player_org_enabled: boolean default false
+  is_mobilizing_partners_enabled: boolean default false
   is_task_maker_enabled: boolean default true
   is_prize_giver_enabled: boolean default true
   verification_status: varchar(20) default 'pending'
