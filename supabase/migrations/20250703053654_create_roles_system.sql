@@ -104,7 +104,7 @@ begin
       )
     );
   
-  -- Also check if organization has the required capability (for org-specific permissions)
+  -- Also check if organization has the required privilege (for org-specific permissions)
   if bind_permissions = 0 and organization_id is not null then
     -- Check if the organization has approved permissions for mission/reward operations
     if requested_permission in ('create_missions', 'manage_missions') then

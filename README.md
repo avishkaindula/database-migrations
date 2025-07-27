@@ -524,7 +524,7 @@ if approved_count > 0 then
 end if;
 ```
 
-**Key Point**: As soon as ANY capability gets approved, membership becomes `'active'`!
+**Key Point**: As soon as ANY privilege gets approved, membership becomes `'active'`!
 
 ### JWT Auth Hook Filtering
 

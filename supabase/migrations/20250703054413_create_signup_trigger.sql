@@ -99,7 +99,7 @@ begin
     end if;
     
     -- Handle multiple permission types for admin
-    -- Default to requesting basic player management capability
+    -- Default to requesting basic partner mobilization privilege
     user_roles_array := string_to_array(
       coalesce(new.raw_user_meta_data->>'permission_types', 'mobilizing_partners'), 
       ','
