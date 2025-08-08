@@ -309,7 +309,8 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
       "privileges": [
         {"type": "mobilizing_partners", "status": "approved"},
         {"type": "mission_partners", "status": "approved"},
-        {"type": "reward_partners", "status": "approved"}
+        {"type": "reward_partners", "status": "approved"},
+        {"type": "cin_administrators", "status": "approved"}
       ]
     }
   ],
@@ -439,12 +440,12 @@ const activeOrgId = user?.user_metadata?.active_organization_id
 
 // Check if user has specific role
 const isCinAdmin = userRoles.some(role => 
-  role.role === 'cin_admin' && role.scope === 'global'
+  role.role === 'admin' && role.scope === 'global'
 )
 
 // Check if user is admin of specific organization
 const isOrgAdmin = (orgId) => userRoles.some(role =>
-  role.role === 'org_admin' && 
+  role.role === 'admin' && 
   role.scope === 'organization' && 
   role.organization_id === orgId
 )
