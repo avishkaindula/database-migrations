@@ -1,6 +1,6 @@
 @startchen
 
-entity Player {
+entity Agent {
   id
   fullName
   email
@@ -27,7 +27,7 @@ entity Event {
   name
 }
 
-entity PlayerOrganization {
+entity AgentOrganization {
   id
   name
 }

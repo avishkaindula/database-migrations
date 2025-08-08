@@ -5,7 +5,8 @@
 
 -- Enable Row Level Security on all tables
 alter table organizations enable row level security;
-alter table players enable row level security;
+-- Enable RLS
+alter table agents enable row level security;
 alter table admins enable row level security;
 alter table admin_memberships enable row level security;
 alter table role_permissions enable row level security;
@@ -47,12 +48,15 @@ create policy "Organizations are viewable by everyone." on organizations
 
 create policy "CIN admins and new admin users can create organizations." on organizations
   for insert with check (
-    -- CIN admins can always create organizations (optimized auth function caching)
+    -- CIN administrators can always create organizations (privilege-based check)
     exists (
-      select 1 from public.user_roles 
-      where user_id = (select auth.uid()) 
-      and role = 'cin_admin'
-      and organization_id is null
+      select 1 from public.user_roles ur
+      join public.admin_memberships am on ur.user_id = am.admin_id
+      join public.organization_permissions op on am.organization_id = op.organization_id
+      where ur.user_id = (select auth.uid()) 
+      and ur.role = 'admin'
+      and op.permission_type = 'cin_administrators'
+      and op.status = 'approved'
     ) or
     -- New admin users can create organizations during signup (no user_roles entry yet)
     ((select auth.role()) = 'authenticated' and not exists (
@@ -60,32 +64,35 @@ create policy "CIN admins and new admin users can create organizations." on orga
     ))
   );
 
-create policy "Org admins and CIN admins can update organizations." on organizations
+create policy "Org admins and CIN administrators can update organizations." on organizations
   for update using (exists (
     select 1 from public.admin_memberships am
     join public.user_roles ur on am.admin_id = ur.user_id
     where am.organization_id = organizations.id
     and ur.user_id = (select auth.uid())
-    and ur.role = 'org_admin'
-    and ur.organization_id = organizations.id
+    and ur.role = 'admin'
   ) or exists (
-    select 1 from public.user_roles 
-    where user_id = (select auth.uid()) 
-    and role = 'cin_admin'
-    and organization_id is null
+    -- CIN administrators can update any organization
+    select 1 from public.user_roles ur
+    join public.admin_memberships am on ur.user_id = am.admin_id
+    join public.organization_permissions op on am.organization_id = op.organization_id
+    where ur.user_id = (select auth.uid()) 
+    and ur.role = 'admin'
+    and op.permission_type = 'cin_administrators'
+    and op.status = 'approved'
   ));
 
 -- ===================
--- PLAYERS POLICIES
+-- AGENTS POLICIES
 -- ===================
 
-create policy "Player profiles are viewable by everyone." on players
+create policy "Agent profiles are viewable by everyone." on agents
   for select using (true);
 
-create policy "Players can insert their own profile." on players
+create policy "Agents can insert their own profile." on agents
   for insert with check ((select auth.uid()) = id);
 
-create policy "Players can update own profile." on players
+create policy "Agents can update own profile." on agents
   for update using ((select auth.uid()) = id);
 
 -- =================
@@ -114,7 +121,7 @@ create policy "Admin memberships policy" on admin_memberships
     exists (
       select 1 from public.user_roles 
       where user_id = (select auth.uid()) 
-      and role = 'cin_admin'
+      and role = 'admin'
       and organization_id is null
     )
   ) with check (
@@ -124,7 +131,7 @@ create policy "Admin memberships policy" on admin_memberships
     exists (
       select 1 from public.user_roles 
       where user_id = (select auth.uid()) 
-      and role = 'cin_admin'
+      and role = 'admin'
       and organization_id is null
     )
   );
@@ -143,7 +150,7 @@ create policy "Role permissions policy" on role_permissions
     exists (
       select 1 from public.user_roles ur
       where ur.user_id = (select auth.uid())
-      and ur.role = 'cin_admin'
+      and ur.role = 'admin'
       and ur.organization_id is null
     )
   );
@@ -161,7 +168,7 @@ create policy "User roles policy" on user_roles
     exists (
       select 1 from public.user_roles ur
       where ur.user_id = (select auth.uid())
-      and ur.role = 'cin_admin'
+      and ur.role = 'admin'
       and ur.organization_id is null
     )
   ) with check (
@@ -169,7 +176,7 @@ create policy "User roles policy" on user_roles
     exists (
       select 1 from public.user_roles ur
       where ur.user_id = (select auth.uid())
-      and ur.role = 'cin_admin'
+      and ur.role = 'admin'
       and ur.organization_id is null
     )
   );
@@ -189,14 +196,14 @@ create policy "Organization permissions policy" on organization_permissions
       join public.user_roles ur on am.admin_id = ur.user_id
       where am.organization_id = organization_permissions.organization_id
         and ur.user_id = (select auth.uid())
-        and ur.role = 'org_admin'
+        and ur.role = 'admin'
         and am.status = 'active'
     ) or
     -- CIN admins can access all permissions
     exists (
       select 1 from public.user_roles ur
       where ur.user_id = (select auth.uid())
-      and ur.role = 'cin_admin'
+      and ur.role = 'admin'
       and ur.organization_id is null
     )
   ) with check (
@@ -206,14 +213,14 @@ create policy "Organization permissions policy" on organization_permissions
       join public.user_roles ur on am.admin_id = ur.user_id
       where am.organization_id = organization_permissions.organization_id
         and ur.user_id = (select auth.uid())
-        and ur.role = 'org_admin'
+        and ur.role = 'admin'
         and am.status = 'active'
     ) or
     -- CIN admins can modify all permissions
     exists (
       select 1 from public.user_roles ur
       where ur.user_id = (select auth.uid())
-      and ur.role = 'cin_admin'
+      and ur.role = 'admin'
       and ur.organization_id is null
     )
   );

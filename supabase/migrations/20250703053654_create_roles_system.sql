@@ -3,25 +3,25 @@
 -- Custom types
 create type public.app_permission as enum (
   'manage_organization',
-  'manage_players', 
+  'manage_agents', 
   'create_missions',
   'manage_missions',
   'create_rewards',
   'manage_rewards',
   'approve_organizations',
-  'manage_cin_admins'
+  'manage_admins'
 );
 
 create type public.app_role as enum (
-  'player',
-  'cin_admin', 
-  'org_admin'
+  'agent',
+  'admin'
 );
 
 create type public.organization_permission_type as enum (
   'mobilizing_partners',
   'mission_partners', 
-  'reward_partners'
+  'reward_partners',
+  'cin_administrators'
 );
 
 -- USER ROLES
@@ -121,20 +121,27 @@ begin
       where op.organization_id = authorize.organization_id
         and op.permission_type = 'reward_partners'
         and op.status = 'approved';
-    elsif requested_permission in ('manage_organization', 'manage_players') then
+    elsif requested_permission in ('manage_organization', 'manage_agents') then
       select count(*)
       into bind_permissions
       from public.organization_permissions op
       where op.organization_id = authorize.organization_id
         and op.permission_type = 'mobilizing_partners'
         and op.status = 'approved';
+    elsif requested_permission in ('approve_organizations', 'manage_admins') then
+      select count(*)
+      into bind_permissions
+      from public.organization_permissions op
+      where op.organization_id = authorize.organization_id
+        and op.permission_type = 'cin_administrators'
+        and op.status = 'approved';
     end if;
     
-    -- Only grant if user is also an org_admin of that organization
+    -- Only grant if user is also an admin of that organization
     if bind_permissions > 0 then
       if not jsonb_path_exists(
         user_roles_jwt, 
-        '$[*] ? (@.scope == "organization" && @.organization_id == $org_id && @.role == "org_admin")',
+        '$[*] ? (@.scope == "organization" && @.organization_id == $org_id && @.role == "admin")',
         jsonb_build_object('org_id', organization_id::text)
       ) then
         bind_permissions := 0;
@@ -242,16 +249,12 @@ $$ language plpgsql stable security definer set search_path = '';
 
 -- Populate role permissions
 INSERT INTO public.role_permissions (role, permission) VALUES
-  -- CIN Admin permissions (global access)
-  ('cin_admin', 'approve_organizations'),
-  ('cin_admin', 'manage_cin_admins'),
-  ('cin_admin', 'manage_organization'),
-  ('cin_admin', 'manage_players'),
-  ('cin_admin', 'create_missions'),
-  ('cin_admin', 'manage_missions'),
-  ('cin_admin', 'create_rewards'),
-  ('cin_admin', 'manage_rewards'),
-  
-  -- Org Admin permissions (organization-scoped, but also checked via organization_permissions)
-  ('org_admin', 'manage_organization'),
-  ('org_admin', 'manage_players');
+  -- Admin permissions (organization-scoped, but also checked via organization_permissions)
+  ('admin', 'manage_organization'),
+  ('admin', 'manage_agents'),
+  ('admin', 'create_missions'),
+  ('admin', 'manage_missions'),
+  ('admin', 'create_rewards'),
+  ('admin', 'manage_rewards'),
+  ('admin', 'approve_organizations'),
+  ('admin', 'manage_admins');

@@ -14,8 +14,8 @@ CREATE TABLE organizations (
   contact_phone text
 );
 
--- Create players table
-CREATE TABLE players (
+-- Create agents table
+CREATE TABLE agents (
   id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,

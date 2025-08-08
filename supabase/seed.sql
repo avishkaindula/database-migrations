@@ -175,7 +175,7 @@ BEGIN
     
     RAISE NOTICE '✅ Step 4: Created admin membership to CIN organization';
     
-    -- Step 5: Assign global CIN admin role
+    -- Step 5: Assign admin role with CIN administrator privilege
     INSERT INTO public.user_roles (
         user_id,
         role,
@@ -184,32 +184,15 @@ BEGIN
         updated_at
     ) VALUES (
         cin_admin_uuid,
-        'cin_admin',
-        NULL,                    -- Global role (not organization-specific)
+        'admin',
+        cin_org_id,              -- Admin role for CIN organization
         NOW(),
         NOW()
     );
     
-    RAISE NOTICE '✅ Step 5: Assigned global CIN admin role';
+    RAISE NOTICE '✅ Step 5: Assigned admin role for CIN organization';
     
-    -- Step 6: Also assign org_admin role for CIN organization
-    INSERT INTO public.user_roles (
-        user_id,
-        role,
-        organization_id,
-        created_at,
-        updated_at
-    ) VALUES (
-        cin_admin_uuid,
-        'org_admin',
-        cin_org_id,              -- Org admin role for CIN organization
-        NOW(),
-        NOW()
-    );
-    
-    RAISE NOTICE '✅ Step 6: Assigned org_admin role for CIN organization';
-    
-    -- Step 7: Create auth.identities record (required for email login)
+    -- Step 6: Create auth.identities record (required for email login)
     INSERT INTO auth.identities (
         id,
         user_id,
@@ -235,9 +218,9 @@ BEGIN
         NOW()
     );
     
-    RAISE NOTICE '✅ Step 7: Created identity record';
+    RAISE NOTICE '✅ Step 6: Created identity record';
     
-    -- Step 8: Grant all organization permission types to CIN organization
+    -- Step 7: Grant all organization permission types to CIN organization
     INSERT INTO public.organization_permissions (
         organization_id,
         permission_type,
@@ -277,9 +260,19 @@ BEGIN
         NOW(),
         NOW(),
         NOW()
+    ),
+    (
+        cin_org_id,
+        'cin_administrators',
+        'approved',              -- Pre-approved for CIN organization
+        cin_admin_uuid,          -- Requested by CIN admin
+        cin_admin_uuid,          -- Auto-approved by CIN admin
+        NOW(),
+        NOW(),
+        NOW()
     );
     
-    RAISE NOTICE '✅ Step 8: Granted all organization permissions to CIN organization';
+    RAISE NOTICE '✅ Step 7: Granted all organization permissions to CIN organization';
     
     -- Final verification
     RAISE NOTICE '';
@@ -296,9 +289,9 @@ BEGIN
     RAISE NOTICE '   Password: %', admin_password;
     RAISE NOTICE '   UUID: %', cin_admin_uuid;
     RAISE NOTICE '';
-    RAISE NOTICE '🔑 Permissions: Global CIN Administrator + CIN Org Admin';
+    RAISE NOTICE '🔑 Permissions: CIN Administrator with all privileges';
     RAISE NOTICE '   - Can approve organizations globally';
-    RAISE NOTICE '   - Can manage all CIN admins globally';
+    RAISE NOTICE '   - Can manage all admins globally';
     RAISE NOTICE '   - Can manage all organizations globally';
     RAISE NOTICE '   - Can create/manage missions and rewards globally';
     RAISE NOTICE '   - Admin of The Climate Intelligence Network organization';
@@ -307,6 +300,7 @@ BEGIN
     RAISE NOTICE '   - Mobilizing Partners (can mobilize partner organizations)';
     RAISE NOTICE '   - Mission Partners (can create and manage missions)';
     RAISE NOTICE '   - Reward Partners (can create and manage rewards)';
+    RAISE NOTICE '   - CIN Administrators (can manage the global CIN system)';
     RAISE NOTICE '';
     RAISE NOTICE '⚠️  IMPORTANT: Store the password securely!';
     RAISE NOTICE '';
@@ -316,10 +310,13 @@ BEGIN
         SELECT 1 FROM auth.users au
         JOIN public.admins a ON au.id = a.id
         JOIN public.user_roles ur ON au.id = ur.user_id
+        JOIN public.organization_permissions op ON ur.organization_id = op.organization_id
         WHERE au.id = cin_admin_uuid
         AND au.email = admin_email
-        AND ur.role = 'cin_admin'
-        AND ur.organization_id IS NULL
+        AND ur.role = 'admin'
+        AND ur.organization_id = cin_org_id
+        AND op.permission_type = 'cin_administrators'
+        AND op.status = 'approved'
     ) THEN
         RAISE EXCEPTION 'CIN Admin creation verification failed!';
     END IF;

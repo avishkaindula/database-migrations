@@ -120,6 +120,39 @@ export type Database = {
           },
         ]
       }
+      agents: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       organization_permissions: {
         Row: {
           created_at: string
@@ -197,39 +230,6 @@ export type Database = {
           name?: string
           updated_at?: string
           website?: string | null
-        }
-        Relationships: []
-      }
-      players: {
-        Row: {
-          address: string | null
-          avatar_url: string | null
-          created_at: string
-          email: string | null
-          full_name: string | null
-          id: string
-          phone: string | null
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          avatar_url?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id: string
-          phone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          avatar_url?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          phone?: string | null
-          updated_at?: string
         }
         Relationships: []
       }
@@ -352,18 +352,19 @@ export type Database = {
     Enums: {
       app_permission:
         | "manage_organization"
-        | "manage_players"
+        | "manage_agents"
         | "create_missions"
         | "manage_missions"
         | "create_rewards"
         | "manage_rewards"
         | "approve_organizations"
-        | "manage_cin_admins"
-      app_role: "player" | "cin_admin" | "org_admin"
+        | "manage_admins"
+      app_role: "agent" | "admin"
       organization_permission_type:
         | "mobilizing_partners"
         | "mission_partners"
         | "reward_partners"
+        | "cin_administrators"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -484,19 +485,20 @@ export const Constants = {
     Enums: {
       app_permission: [
         "manage_organization",
-        "manage_players",
+        "manage_agents",
         "create_missions",
         "manage_missions",
         "create_rewards",
         "manage_rewards",
         "approve_organizations",
-        "manage_cin_admins",
+        "manage_admins",
       ],
-      app_role: ["player", "cin_admin", "org_admin"],
+      app_role: ["agent", "admin"],
       organization_permission_type: [
         "mobilizing_partners",
         "mission_partners",
         "reward_partners",
+        "cin_administrators",
       ],
     },
   },
