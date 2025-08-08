@@ -19,9 +19,8 @@ The Climate Intelligence Network uses a role-based permission system with three 
 
 ### User Roles
 
-1. **`player`** - Regular users who participate in missions and earn rewards
-2. **`org_admin`** - Organization administrators who manage their organization's activities
-3. **`cin_admin`** - Global system administrators who approve organizations and manage the entire network
+1. **`agent`** - Regular users who participate in missions and earn rewards
+2. **`admin`** - Organization administrators who manage their organization's activities
 
 ### Organization Privilege Types
 
@@ -29,6 +28,8 @@ Organizations can request and be granted different privileges:
 
 - **`mobilizing_partners`** - Can mobilize and coordinate partner organizations
 - **`mission_partners`** - Can create and manage climate action missions
+- **`reward_partners`** - Can create and manage reward redemption programs
+- **`cin_administrators`** - Can manage the global CIN system (special privilege for CIN organization)
 - **`reward_partners`** - Can create and distribute rewards for mission completion
 
 ## Organization Signup and Activation Flow
@@ -43,7 +44,7 @@ const { error } = await supabase.auth.signUp({
   password: 'securepassword123',
   options: {
     data: {
-      user_type: 'admin',                    // Creates an org_admin
+      user_type: 'admin',                    // Creates an admin
       full_name: 'John Doe',                 
       phone: '+1-555-0123',
       address: '123 Main St, City, State',
@@ -62,7 +63,7 @@ The `handle_new_user()` trigger automatically:
 2. Creates an admin profile for the user
 3. Links the admin to the organization with `status: 'pending'`
 4. Creates organization permission requests with `status: 'pending'`
-5. Assigns the user an `org_admin` role for that organization
+5. Assigns the user an `admin` role for that organization
 
 ### 3. Organization "Status" System
 
@@ -175,7 +176,7 @@ This will create a new CIN admin with:
 The database schema is built through these migration files (applied in order):
 
 1. **`20250625011105_create_base_tables.sql`**
-   - Creates core tables: `organizations`, `players`, `admins`, `admin_memberships`
+   - Creates core tables: `organizations`, `agents`, `admins`, `admin_memberships`
    - Sets up avatar storage bucket and policies
    - No RLS policies yet (added later)
 
@@ -188,7 +189,7 @@ The database schema is built through these migration files (applied in order):
 3. **`20250703054413_create_signup_trigger.sql`**
    - Creates `handle_new_user()` trigger function
    - Automatically processes new user signups based on metadata
-   - Handles both player and admin creation flows
+   - Handles both agent and admin creation flows
    - Prevents unauthorized CIN admin creation via public signup
 
 4. **`20250703055000_create_auth_hook.sql`**
@@ -212,7 +213,7 @@ The database schema is built through these migration files (applied in order):
 
 - **`organizations`** - Organization details
 - **`admins`** - Organization administrator profiles  
-- **`players`** - Player profiles
+- **`agents`** - Agent profiles
 - **`admin_memberships`** - Links admins to organizations with status
 - **`user_roles`** - Assigns roles to users (globally or per-organization)
 - **`organization_permissions`** - Tracks requested/approved privileges per organization
@@ -224,10 +225,10 @@ The database schema is built through these migration files (applied in order):
 
 The system automatically processes new user signups based on the `raw_user_meta_data` provided:
 
-**For Players** (default when no `user_type` specified):
+**For Agents** (default when no `user_type` specified):
 
-- Creates player profile
-- Assigns global `player` role
+- Creates agent profile
+- Assigns global `agent` role
 - No organization restrictions
 
 **For Admins** (`user_type: 'admin'`):
@@ -235,7 +236,7 @@ The system automatically processes new user signups based on the `raw_user_meta_
 - Creates admin profile
 - Creates or joins organization
 - Requests organization permissions
-- Assigns `org_admin` role for that organization
+- Assigns `admin` role for that organization
 - Status depends on organization approval state
 
 **Security Features**:
@@ -257,7 +258,7 @@ Automatically adds user context to JWT tokens:
 
 The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the tokens look like for different user scenarios:
 
-#### 1. Regular Player (Global Role)
+#### 1. Regular Agent (Global Role)
 
 ```json
 {
@@ -266,10 +267,10 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
   "iat": 1721847600,
   "iss": "https://your-project.supabase.co/auth/v1",
   "sub": "550e8400-e29b-41d4-a716-446655440001",
-  "email": "player@example.com",
+  "email": "agent@example.com",
   "user_roles": [
     {
-      "role": "player",
+      "role": "agent",
       "scope": "global"
     }
   ],
@@ -290,11 +291,11 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
   "email": "cinadmin1@climateintel.org",
   "user_roles": [
     {
-      "role": "cin_admin",
+      "role": "admin",
       "scope": "global"
     },
     {
-      "role": "org_admin", 
+      "role": "admin", 
       "scope": "organization",
       "organization_id": "00000000-1111-2222-3333-444444444444",
       "organization_name": "The Climate Intelligence Network"
@@ -328,7 +329,7 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
   "email": "admin@greentech.org",
   "user_roles": [
     {
-      "role": "org_admin",
+      "role": "admin",
       "scope": "organization", 
       "organization_id": "987fcdeb-51a2-4b3c-9d4e-5f6789abcdef",
       "organization_name": "GreenTech Solutions"
@@ -351,7 +352,7 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
   "email": "admin@ecoalliance.org",
   "user_roles": [
     {
-      "role": "org_admin",
+      "role": "admin",
       "scope": "organization",
       "organization_id": "111a222b-333c-444d-555e-666f777g888h", 
       "organization_name": "Eco Alliance"
@@ -387,13 +388,13 @@ The `custom_access_token_hook` adds custom claims to JWT tokens. Here's what the
   "email": "admin@consultant.com",
   "user_roles": [
     {
-      "role": "org_admin",
+      "role": "admin",
       "scope": "organization",
       "organization_id": "aaa1111b-222c-333d-444e-555f666g777h",
       "organization_name": "Climate Consultants"
     },
     {
-      "role": "org_admin", 
+      "role": "admin", 
       "scope": "organization",
       "organization_id": "bbb2222c-333d-444e-555f-666g777h888i",
       "organization_name": "Green Solutions Inc"

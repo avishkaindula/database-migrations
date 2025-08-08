@@ -148,7 +148,7 @@ BEGIN
     
     RAISE NOTICE '✅ Step 3: Created admin membership to CIN organization';
     
-    -- Step 4: Assign global CIN admin role
+    -- Step 4: Assign admin role for CIN organization
     INSERT INTO public.user_roles (
         user_id,
         role,
@@ -157,30 +157,36 @@ BEGIN
         updated_at
     ) VALUES (
         new_admin_uuid,
-        'cin_admin',
-        NULL,                    -- Global role (not organization-specific)
+        'admin',
+        cin_org_id,              -- Admin role for CIN organization
         NOW(),
         NOW()
     );
     
-    RAISE NOTICE '✅ Step 4: Assigned global CIN admin role';
+    RAISE NOTICE '✅ Step 4: Assigned admin role for CIN organization';
     
-    -- Step 5: Also assign org_admin role for CIN organization
-    INSERT INTO public.user_roles (
-        user_id,
-        role,
+    -- Step 5: Grant CIN administrators privilege
+    INSERT INTO public.organization_permissions (
         organization_id,
+        permission_type,
+        status,
+        requested_by,
+        reviewed_by,
+        reviewed_at,
         created_at,
         updated_at
     ) VALUES (
-        new_admin_uuid,
-        'org_admin',
-        cin_org_id,              -- Org admin role for CIN organization
+        cin_org_id,
+        'cin_administrators',
+        'approved',              -- Pre-approved for CIN organization
+        new_admin_uuid,          -- Requested by new admin
+        new_admin_uuid,          -- Auto-approved by new admin
+        NOW(),
         NOW(),
         NOW()
     );
     
-    RAISE NOTICE '✅ Step 5: Assigned org_admin role for CIN organization';
+    RAISE NOTICE '✅ Step 5: Granted CIN administrators privilege';
     
     -- Step 6: Create auth.identities record (required for email login)
     INSERT INTO auth.identities (
@@ -220,9 +226,9 @@ BEGIN
     RAISE NOTICE '   UUID: %', new_admin_uuid;
     RAISE NOTICE '   Name: %', admin_full_name;
     RAISE NOTICE '';
-    RAISE NOTICE '🔑 Permissions: Global CIN Administrator + CIN Org Admin';
+    RAISE NOTICE '🔑 Permissions: CIN Administrator with full privileges';
     RAISE NOTICE '   - Can approve organizations globally';
-    RAISE NOTICE '   - Can manage all CIN admins globally';
+    RAISE NOTICE '   - Can manage all admins globally';
     RAISE NOTICE '   - Can manage all organizations globally';
     RAISE NOTICE '   - Can create/manage missions and rewards globally';
     RAISE NOTICE '   - Admin of The Climate Intelligence Network organization';
@@ -235,10 +241,14 @@ BEGIN
         SELECT 1 FROM auth.users au
         JOIN public.admins a ON au.id = a.id
         JOIN public.user_roles ur ON au.id = ur.user_id
+        JOIN public.admin_memberships am ON au.id = am.admin_id
+        JOIN public.organization_permissions op ON am.organization_id = op.organization_id
         WHERE au.id = new_admin_uuid
         AND au.email = admin_email
-        AND ur.role = 'cin_admin'
-        AND ur.organization_id IS NULL
+        AND ur.role = 'admin'
+        AND ur.organization_id = cin_org_id
+        AND op.permission_type = 'cin_administrators'
+        AND op.status = 'approved'
     ) THEN
         RAISE EXCEPTION 'CIN Admin creation verification failed!';
     END IF;
