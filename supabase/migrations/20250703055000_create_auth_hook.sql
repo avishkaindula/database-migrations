@@ -27,7 +27,7 @@ as $$
       where ur.user_id = (event->>'user_id')::uuid
     loop
       if role_record.organization_id is null then
-        -- Global role (like player roles)
+        -- Global role (like agent roles)
         user_roles_array := user_roles_array || jsonb_build_object(
           'role', role_record.role,
           'scope', 'global'

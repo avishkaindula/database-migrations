@@ -15,9 +15,11 @@ begin
   reviewer_id := auth.uid();
   if not exists (
     select 1 from public.user_roles ur 
+    join public.organization_permissions op on ur.organization_id = op.organization_id
     where ur.user_id = reviewer_id 
-    and ur.role = 'cin_admin' 
-    and ur.organization_id is null
+    and ur.role = 'admin' 
+    and op.permission_type = 'cin_administrators'
+    and op.status = 'approved'
   ) then
     raise exception 'Only CIN admins can approve organization privileges';
   end if;
@@ -72,9 +74,11 @@ begin
   reviewer_id := auth.uid();
   if not exists (
     select 1 from public.user_roles ur 
+    join public.organization_permissions op on ur.organization_id = op.organization_id
     where ur.user_id = reviewer_id 
-    and ur.role = 'cin_admin' 
-    and ur.organization_id is null
+    and ur.role = 'admin' 
+    and op.permission_type = 'cin_administrators'
+    and op.status = 'approved'
   ) then
     raise exception 'Only CIN admins can reject organization privileges';
   end if;

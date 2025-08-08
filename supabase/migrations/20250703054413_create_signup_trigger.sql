@@ -20,19 +20,19 @@ begin
     return new;
   end if;
   
-  -- Get user type from metadata (defaults to "player" for public signups)
-  user_type := coalesce(new.raw_user_meta_data->>'user_type', 'player');
+  -- Get user type from metadata (defaults to "agent" for public signups)
+  user_type := coalesce(new.raw_user_meta_data->>'user_type', 'agent');
   
-  -- Note: If no user_type is provided, we default to "player" for public signups
+  -- Note: If no user_type is provided, we default to "agent" for public signups
   
   -- Security: Validate user_type against allowed values
-  if user_type not in ('player', 'admin') then
+  if user_type not in ('agent', 'admin') then
     raise exception 'Invalid user_type: %. Only "agent" and "admin" are allowed.', user_type;
   end if;
   
   -- Security: Prevent unauthorized CIN administrator creation via public signup
   -- CIN administrators can only be created through the Supabase dashboard or by existing CIN admins
-  if user_type = 'cin_admin' then
+  if new.raw_user_meta_data ? 'has_cin_admin_privileges' and (new.raw_user_meta_data->>'has_cin_admin_privileges')::boolean = true then
     raise exception 'CIN administrator accounts cannot be created through public signup. Contact system administrator.';
   end if;
   
