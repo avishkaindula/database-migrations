@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          query?: string
-          operationName?: string
-          variables?: Json
           extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
         }
         Returns: Json
       }
@@ -373,84 +373,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "missions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "missions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      point_transactions: {
-        Row: {
-          agent_id: string
-          balance_after: number
-          created_at: string
-          description: string
-          id: number
-          metadata: Json | null
-          mission_id: string | null
-          points_amount: number
-          reference_id: string | null
-          reference_type: string | null
-          submission_id: string | null
-          transaction_type: string
-        }
-        Insert: {
-          agent_id: string
-          balance_after: number
-          created_at?: string
-          description: string
-          id?: number
-          metadata?: Json | null
-          mission_id?: string | null
-          points_amount: number
-          reference_id?: string | null
-          reference_type?: string | null
-          submission_id?: string | null
-          transaction_type: string
-        }
-        Update: {
-          agent_id?: string
-          balance_after?: number
-          created_at?: string
-          description?: string
-          id?: number
-          metadata?: Json | null
-          mission_id?: string | null
-          points_amount?: number
-          reference_id?: string | null
-          reference_type?: string | null
-          submission_id?: string | null
-          transaction_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "point_transactions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "point_transactions_mission_id_fkey"
-            columns: ["mission_id"]
-            isOneToOne: false
-            referencedRelation: "missions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "point_transactions_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "mission_submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -535,6 +461,73 @@ export type Database = {
         }
         Relationships: []
       }
+      point_transactions: {
+        Row: {
+          agent_id: string
+          balance_after: number
+          created_at: string
+          description: string
+          id: number
+          metadata: Json | null
+          mission_id: string | null
+          points_amount: number
+          reference_id: string | null
+          reference_type: string | null
+          submission_id: string | null
+          transaction_type: string
+        }
+        Insert: {
+          agent_id: string
+          balance_after: number
+          created_at?: string
+          description: string
+          id?: number
+          metadata?: Json | null
+          mission_id?: string | null
+          points_amount: number
+          reference_id?: string | null
+          reference_type?: string | null
+          submission_id?: string | null
+          transaction_type: string
+        }
+        Update: {
+          agent_id?: string
+          balance_after?: number
+          created_at?: string
+          description?: string
+          id?: number
+          metadata?: Json | null
+          mission_id?: string | null
+          points_amount?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          submission_id?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "point_transactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "point_transactions_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "point_transactions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "mission_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           id: number
@@ -594,22 +587,18 @@ export type Database = {
     }
     Functions: {
       approve_organization_privileges: {
-        Args: { privilege_types?: string[]; target_organization_id: string }
+        Args: { target_organization_id: string; privilege_types?: string[] }
         Returns: Json
       }
       authorize: {
         Args: {
-          requested_permission: Database["public"]["Enums"]["app_permission"]
           organization_id?: string
+          requested_permission: Database["public"]["Enums"]["app_permission"]
         }
         Returns: boolean
       }
       bookmark_or_start_mission: {
-        Args: {
-          p_agent_id: string
-          p_mission_id: string
-          p_action: string
-        }
+        Args: { p_agent_id: string; p_mission_id: string; p_action: string }
         Returns: string
       }
       complete_mission_submission: {
@@ -632,13 +621,13 @@ export type Database = {
       get_pending_organization_approvals: {
         Args: Record<PropertyKey, never>
         Returns: {
-          requested_privileges: Json
-          created_at: string
-          admin_name: string
-          contact_email: string
           organization_id: string
           organization_name: string
+          contact_email: string
+          admin_name: string
           admin_email: string
+          requested_privileges: Json
+          created_at: string
         }[]
       }
       has_organization_role: {
@@ -661,9 +650,9 @@ export type Database = {
       }
       reject_organization_privileges: {
         Args: {
-          rejection_reason?: string
-          privilege_types?: string[]
           target_organization_id: string
+          privilege_types?: string[]
+          rejection_reason?: string
         }
         Returns: Json
       }
