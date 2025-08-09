@@ -353,19 +353,13 @@ CREATE POLICY "Mission content is publicly viewable" ON storage.objects
 CREATE POLICY "Mission creators can upload content" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id = 'mission-content' 
-    AND auth.role() = 'authenticated'
-    AND EXISTS (
-      SELECT 1 FROM public.authorize('create_missions'::app_permission)
-    )
+    AND can_create_missions()
   );
 
 CREATE POLICY "Mission creators can update their content" ON storage.objects
   FOR UPDATE USING (
     bucket_id = 'mission-content' 
-    AND auth.role() = 'authenticated'
-    AND EXISTS (
-      SELECT 1 FROM public.authorize('manage_missions'::app_permission)
-    )
+    AND can_create_missions()
   );
 
 -- Set up storage policies for mission submissions
@@ -385,9 +379,7 @@ CREATE POLICY "Authenticated users can upload submissions" ON storage.objects
 CREATE POLICY "Mission reviewers can view submissions" ON storage.objects
   FOR SELECT USING (
     bucket_id = 'mission-submissions'
-    AND EXISTS (
-      SELECT 1 FROM public.authorize('manage_missions'::app_permission)
-    )
+    AND can_create_missions()
   );
 
 -- Create function to automatically update updated_at timestamps

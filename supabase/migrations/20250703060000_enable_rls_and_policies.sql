@@ -9,7 +9,6 @@ alter table organizations enable row level security;
 alter table agents enable row level security;
 alter table admins enable row level security;
 alter table admin_memberships enable row level security;
-alter table organization_privilege_permissions enable row level security;
 alter table user_roles enable row level security;
 alter table organization_permissions enable row level security;
 
@@ -136,84 +135,53 @@ create policy "Admin memberships policy" on admin_memberships
     )
   );
 
--- ===========================
--- ORGANIZATION PRIVILEGE PERMISSIONS POLICIES
--- ===========================
-
--- Simple policies for the new privilege system
-create policy "Anyone can view privilege mappings" on organization_privilege_permissions
-  for select using (true);
-
-create policy "Only authenticated can modify privilege mappings" on organization_privilege_permissions
-  for all with check ((select auth.role()) = 'authenticated');
-
 -- ===================
--- USER ROLES POLICIES
+-- USER ROLES POLICIES  
 -- ===================
 
--- Simplified policies to avoid circular dependencies
+-- Simple JWT-based policies without database lookups
 create policy "Users can view own roles" on user_roles
-  for select using (user_id = (select auth.uid()));
+  for select using (user_id = auth.uid());
 
-create policy "Allow authenticated role inserts" on user_roles
-  for insert with check ((select auth.role()) = 'authenticated');
+create policy "Authenticated users can insert roles" on user_roles
+  for insert with check (auth.role() = 'authenticated');
 
 create policy "Users can update own roles" on user_roles
-  for update using (user_id = (select auth.uid()));
+  for update using (user_id = auth.uid());
+
+create policy "Users can delete own roles" on user_roles
+  for delete using (user_id = auth.uid());
 
 -- ===========================
 -- ADMIN MEMBERSHIPS POLICIES
 -- ===========================
 
--- Simplified policies to avoid circular dependencies
+-- Simple JWT-based policies without database lookups
 create policy "Admins can view own memberships" on admin_memberships
-  for select using (admin_id = (select auth.uid()));
+  for select using (admin_id = auth.uid());
 
-create policy "Allow authenticated membership inserts" on admin_memberships
-  for insert with check ((select auth.role()) = 'authenticated');
+create policy "Authenticated users can insert memberships" on admin_memberships
+  for insert with check (auth.role() = 'authenticated');
 
 create policy "Admins can update own memberships" on admin_memberships
-  for update using (admin_id = (select auth.uid()));
+  for update using (admin_id = auth.uid());
 
--- ===================
--- USER ROLES POLICIES
--- ===================
-
--- Single consolidated policy for user roles (eliminates multiple permissive policies)
-create policy "User roles policy" on user_roles
-  for all using (
-    -- Users can view their own roles
-    user_id = (select auth.uid()) or
-    -- CIN admins can view all roles
-    exists (
-      select 1 from public.user_roles ur
-      where ur.user_id = (select auth.uid())
-      and ur.role = 'admin'
-      and ur.organization_id is null
-    )
-  ) with check (
-    -- Only CIN admins can modify user roles
-    exists (
-      select 1 from public.user_roles ur
-      where ur.user_id = (select auth.uid())
-      and ur.role = 'admin'
-      and ur.organization_id is null
-    )
-  );
+create policy "Admins can delete own memberships" on admin_memberships
+  for delete using (admin_id = auth.uid());
 
 -- ====================================
 -- ORGANIZATION PERMISSIONS POLICIES
 -- ====================================
 
--- Simplified policies to avoid circular dependencies
+-- Simple JWT-based policies without database lookups
 create policy "Users can view org permissions they requested" on organization_permissions
-  for select using (requested_by = (select auth.uid()));
+  for select using (requested_by = auth.uid());
 
 create policy "Anyone can view approved org permissions" on organization_permissions
   for select using (status = 'approved');
 
-create policy "Allow authenticated org permission inserts" on organization_permissions
-  for insert with check ((select auth.role()) = 'authenticated');
+create policy "Authenticated users can insert org permissions" on organization_permissions
+  for insert with check (auth.role() = 'authenticated');
 
 create policy "Users can update org permissions they requested" on organization_permissions
-  for update using (requested_by = (select auth.uid()));
+  for update using (requested_by = auth.uid());
