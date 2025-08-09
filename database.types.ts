@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
           variables?: Json
+          query?: string
+          operationName?: string
+          extensions?: Json
         }
         Returns: Json
       }
@@ -592,13 +592,13 @@ export type Database = {
       }
       authorize: {
         Args: {
-          organization_id?: string
           requested_permission: Database["public"]["Enums"]["app_permission"]
+          organization_id?: string
         }
         Returns: boolean
       }
       bookmark_or_start_mission: {
-        Args: { p_agent_id: string; p_mission_id: string; p_action: string }
+        Args: { p_action: string; p_agent_id: string; p_mission_id: string }
         Returns: string
       }
       complete_mission_submission: {
@@ -621,13 +621,13 @@ export type Database = {
       get_pending_organization_approvals: {
         Args: Record<PropertyKey, never>
         Returns: {
-          organization_id: string
-          organization_name: string
-          contact_email: string
-          admin_name: string
-          admin_email: string
           requested_privileges: Json
           created_at: string
+          contact_email: string
+          organization_name: string
+          organization_id: string
+          admin_name: string
+          admin_email: string
         }[]
       }
       has_organization_role: {
