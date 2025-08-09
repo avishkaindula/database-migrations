@@ -23,7 +23,9 @@ CREATE TABLE agents (
   avatar_url text,
   email text,
   phone text,
-  address text
+  address text,
+  energy integer NOT NULL DEFAULT 0,
+  points integer NOT NULL DEFAULT 0
 );
 
 -- Create admins table
