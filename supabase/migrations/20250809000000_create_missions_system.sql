@@ -350,16 +350,16 @@ $$ LANGUAGE plpgsql;
 CREATE POLICY "Mission content is publicly viewable" ON storage.objects
   FOR SELECT USING (bucket_id = 'mission-content');
 
-CREATE POLICY "Mission creators can upload content" ON storage.objects
+CREATE POLICY "Authenticated users can upload mission content" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id = 'mission-content' 
-    AND can_create_missions()
+    AND auth.role() = 'authenticated'
   );
 
-CREATE POLICY "Mission creators can update their content" ON storage.objects
+CREATE POLICY "Authenticated users can update mission content" ON storage.objects
   FOR UPDATE USING (
     bucket_id = 'mission-content' 
-    AND can_create_missions()
+    AND auth.role() = 'authenticated'
   );
 
 -- Set up storage policies for mission submissions
@@ -376,10 +376,10 @@ CREATE POLICY "Authenticated users can upload submissions" ON storage.objects
     AND (storage.foldername(name))[1] = (SELECT auth.uid()::text)
   );
 
-CREATE POLICY "Mission reviewers can view submissions" ON storage.objects
+CREATE POLICY "Authenticated users can view mission submissions" ON storage.objects
   FOR SELECT USING (
     bucket_id = 'mission-submissions'
-    AND can_create_missions()
+    AND auth.role() = 'authenticated'
   );
 
 -- Create function to automatically update updated_at timestamps
