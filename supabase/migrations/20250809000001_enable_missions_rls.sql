@@ -23,7 +23,7 @@ CREATE POLICY "Authenticated users can view missions" ON missions
 
 -- Only users with mission_partners privilege + admin role can create missions
 CREATE POLICY "Mission partners can create missions" ON missions
-  FOR INSERT WITH CHECK (can_create_missions());
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- Mission creators can update their own missions
 CREATE POLICY "Mission creators can update their missions" ON missions
@@ -31,7 +31,7 @@ CREATE POLICY "Mission creators can update their missions" ON missions
 
 -- Mission creators can delete their own missions OR CIN admins can delete any
 CREATE POLICY "Mission creators and CIN admins can delete missions" ON missions
-  FOR DELETE USING (created_by = auth.uid() OR is_cin_admin());
+  FOR DELETE USING (created_by = auth.uid());
 
 -- ======================
 -- MISSION BOOKMARKS POLICIES
