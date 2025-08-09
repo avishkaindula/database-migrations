@@ -22,7 +22,7 @@ CREATE TABLE missions (
   guidance_steps jsonb NOT NULL DEFAULT '[]'::jsonb, -- Array of guidance step objects with evidence requirements
   
   -- Media
-  thumbnail_url text,
+  thumbnail_path text, -- Stores the path in storage, not a public URL
   
   -- Status and visibility
   status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
@@ -346,9 +346,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Set up storage policies for mission content
-CREATE POLICY "Mission content is publicly viewable" ON storage.objects
-  FOR SELECT USING (bucket_id = 'mission-content');
+-- Set up storage policies for mission content (private bucket)
+CREATE POLICY "Authenticated users can view mission content" ON storage.objects
+  FOR SELECT USING (
+    bucket_id = 'mission-content' 
+    AND auth.role() = 'authenticated'
+  );
 
 CREATE POLICY "Authenticated users can upload mission content" ON storage.objects
   FOR INSERT WITH CHECK (
