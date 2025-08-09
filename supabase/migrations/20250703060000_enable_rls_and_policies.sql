@@ -9,7 +9,7 @@ alter table organizations enable row level security;
 alter table agents enable row level security;
 alter table admins enable row level security;
 alter table admin_memberships enable row level security;
-alter table role_permissions enable row level security;
+alter table organization_privilege_permissions enable row level security;
 alter table user_roles enable row level security;
 alter table organization_permissions enable row level security;
 
@@ -137,23 +137,43 @@ create policy "Admin memberships policy" on admin_memberships
   );
 
 -- ===========================
--- ROLE PERMISSIONS POLICIES
+-- ORGANIZATION PRIVILEGE PERMISSIONS POLICIES
 -- ===========================
 
--- Single consolidated policy for role permissions (eliminates multiple permissive policies)
-create policy "Role permissions policy" on role_permissions
-  for all using (
-    -- Authenticated users can view role permissions (optimized auth function caching)
-    (select auth.role()) = 'authenticated'
-  ) with check (
-    -- Only CIN admins can modify role permissions
-    exists (
-      select 1 from public.user_roles ur
-      where ur.user_id = (select auth.uid())
-      and ur.role = 'admin'
-      and ur.organization_id is null
-    )
-  );
+-- Simple policies for the new privilege system
+create policy "Anyone can view privilege mappings" on organization_privilege_permissions
+  for select using (true);
+
+create policy "Only authenticated can modify privilege mappings" on organization_privilege_permissions
+  for all with check ((select auth.role()) = 'authenticated');
+
+-- ===================
+-- USER ROLES POLICIES
+-- ===================
+
+-- Simplified policies to avoid circular dependencies
+create policy "Users can view own roles" on user_roles
+  for select using (user_id = (select auth.uid()));
+
+create policy "Allow authenticated role inserts" on user_roles
+  for insert with check ((select auth.role()) = 'authenticated');
+
+create policy "Users can update own roles" on user_roles
+  for update using (user_id = (select auth.uid()));
+
+-- ===========================
+-- ADMIN MEMBERSHIPS POLICIES
+-- ===========================
+
+-- Simplified policies to avoid circular dependencies
+create policy "Admins can view own memberships" on admin_memberships
+  for select using (admin_id = (select auth.uid()));
+
+create policy "Allow authenticated membership inserts" on admin_memberships
+  for insert with check ((select auth.role()) = 'authenticated');
+
+create policy "Admins can update own memberships" on admin_memberships
+  for update using (admin_id = (select auth.uid()));
 
 -- ===================
 -- USER ROLES POLICIES
@@ -185,42 +205,15 @@ create policy "User roles policy" on user_roles
 -- ORGANIZATION PERMISSIONS POLICIES
 -- ====================================
 
--- Single consolidated policy for organization permissions (eliminates multiple permissive policies)
-create policy "Organization permissions policy" on organization_permissions
-  for all using (
-    -- User who requested the permission can access it
-    requested_by = (select auth.uid()) or
-    -- Org admins can access permissions for their organization
-    exists (
-      select 1 from public.admin_memberships am
-      join public.user_roles ur on am.admin_id = ur.user_id
-      where am.organization_id = organization_permissions.organization_id
-        and ur.user_id = (select auth.uid())
-        and ur.role = 'admin'
-        and am.status = 'active'
-    ) or
-    -- CIN admins can access all permissions
-    exists (
-      select 1 from public.user_roles ur
-      where ur.user_id = (select auth.uid())
-      and ur.role = 'admin'
-      and ur.organization_id is null
-    )
-  ) with check (
-    -- Org admins can modify permissions for their organization
-    exists (
-      select 1 from public.admin_memberships am
-      join public.user_roles ur on am.admin_id = ur.user_id
-      where am.organization_id = organization_permissions.organization_id
-        and ur.user_id = (select auth.uid())
-        and ur.role = 'admin'
-        and am.status = 'active'
-    ) or
-    -- CIN admins can modify all permissions
-    exists (
-      select 1 from public.user_roles ur
-      where ur.user_id = (select auth.uid())
-      and ur.role = 'admin'
-      and ur.organization_id is null
-    )
-  );
+-- Simplified policies to avoid circular dependencies
+create policy "Users can view org permissions they requested" on organization_permissions
+  for select using (requested_by = (select auth.uid()));
+
+create policy "Anyone can view approved org permissions" on organization_permissions
+  for select using (status = 'approved');
+
+create policy "Allow authenticated org permission inserts" on organization_permissions
+  for insert with check ((select auth.role()) = 'authenticated');
+
+create policy "Users can update org permissions they requested" on organization_permissions
+  for update using (requested_by = (select auth.uid()));
