@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          operationName?: string
-          extensions?: Json
           variables?: Json
+          operationName?: string
           query?: string
+          extensions?: Json
         }
         Returns: Json
       }
@@ -572,6 +572,10 @@ export type Database = {
         Args: { target_organization_id: string; privilege_types?: string[] }
         Returns: Json
       }
+      auto_complete_mission_submission: {
+        Args: { p_submission_id: string }
+        Returns: Json
+      }
       bookmark_or_start_mission: {
         Args: { p_agent_id: string; p_mission_id: string; p_action: string }
         Returns: string
@@ -580,8 +584,8 @@ export type Database = {
         Args: {
           p_submission_id: string
           p_reviewed_by?: string
-          p_review_notes?: string
           p_review_score?: number
+          p_review_notes?: string
         }
         Returns: undefined
       }
