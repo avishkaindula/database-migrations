@@ -42,8 +42,8 @@ WHERE status = 'approved';
 -- ORGANIZATIONS POLICIES
 -- ======================
 
-create policy "Organizations are viewable by everyone." on organizations
-  for select using (true);
+create policy "Authenticated users can view organizations" on organizations
+  for select using (auth.role() = 'authenticated');
 
 create policy "CIN admins and new admin users can create organizations." on organizations
   for insert with check (
