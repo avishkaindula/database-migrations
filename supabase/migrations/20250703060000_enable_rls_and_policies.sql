@@ -5,6 +5,11 @@
 
 -- Enable Row Level Security on all tables
 alter table organizations enable row level security;
+
+-- Grant basic permissions to organizations table
+GRANT SELECT ON organizations TO authenticated;
+GRANT SELECT ON organizations TO authenticator;
+
 -- Enable RLS
 alter table agents enable row level security;
 alter table admins enable row level security;
