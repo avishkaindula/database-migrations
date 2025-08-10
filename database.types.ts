@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          variables?: Json
-          query?: string
           operationName?: string
           extensions?: Json
+          variables?: Json
+          query?: string
         }
         Returns: Json
       }
@@ -335,7 +335,7 @@ export type Database = {
           organization_id: string
           points_awarded: number
           status: string
-          thumbnail_url: string | null
+          thumbnail_path: string | null
           title: string
           updated_at: string
         }
@@ -351,7 +351,7 @@ export type Database = {
           organization_id: string
           points_awarded: number
           status?: string
-          thumbnail_url?: string | null
+          thumbnail_path?: string | null
           title: string
           updated_at?: string
         }
@@ -367,7 +367,7 @@ export type Database = {
           organization_id?: string
           points_awarded?: number
           status?: string
-          thumbnail_url?: string | null
+          thumbnail_path?: string | null
           title?: string
           updated_at?: string
         }
@@ -528,24 +528,6 @@ export type Database = {
           },
         ]
       }
-      role_permissions: {
-        Row: {
-          id: number
-          permission: Database["public"]["Enums"]["app_permission"]
-          role: Database["public"]["Enums"]["app_role"]
-        }
-        Insert: {
-          id?: number
-          permission: Database["public"]["Enums"]["app_permission"]
-          role: Database["public"]["Enums"]["app_role"]
-        }
-        Update: {
-          id?: number
-          permission?: Database["public"]["Enums"]["app_permission"]
-          role?: Database["public"]["Enums"]["app_role"]
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           created_at: string
@@ -590,15 +572,8 @@ export type Database = {
         Args: { target_organization_id: string; privilege_types?: string[] }
         Returns: Json
       }
-      authorize: {
-        Args: {
-          requested_permission: Database["public"]["Enums"]["app_permission"]
-          organization_id?: string
-        }
-        Returns: boolean
-      }
       bookmark_or_start_mission: {
-        Args: { p_action: string; p_agent_id: string; p_mission_id: string }
+        Args: { p_agent_id: string; p_mission_id: string; p_action: string }
         Returns: string
       }
       complete_mission_submission: {
@@ -614,39 +589,17 @@ export type Database = {
         Args: { event: Json }
         Returns: Json
       }
-      get_active_org_privileges: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
       get_pending_organization_approvals: {
         Args: Record<PropertyKey, never>
         Returns: {
-          requested_privileges: Json
-          created_at: string
-          contact_email: string
-          organization_name: string
           organization_id: string
+          organization_name: string
+          contact_email: string
           admin_name: string
           admin_email: string
+          requested_privileges: Json
+          created_at: string
         }[]
-      }
-      has_organization_role: {
-        Args: {
-          role_name: Database["public"]["Enums"]["app_role"]
-          organization_id: string
-        }
-        Returns: boolean
-      }
-      is_organization_member: {
-        Args: { organization_id: string }
-        Returns: boolean
-      }
-      organization_has_privilege: {
-        Args: {
-          organization_id: string
-          privilege: Database["public"]["Enums"]["organization_permission_type"]
-        }
-        Returns: boolean
       }
       reject_organization_privileges: {
         Args: {
@@ -658,15 +611,6 @@ export type Database = {
       }
     }
     Enums: {
-      app_permission:
-        | "manage_organization"
-        | "manage_agents"
-        | "create_missions"
-        | "manage_missions"
-        | "create_rewards"
-        | "manage_rewards"
-        | "approve_organizations"
-        | "manage_admins"
       app_role: "agent" | "admin"
       organization_permission_type:
         | "mobilizing_partners"
@@ -791,16 +735,6 @@ export const Constants = {
   },
   public: {
     Enums: {
-      app_permission: [
-        "manage_organization",
-        "manage_agents",
-        "create_missions",
-        "manage_missions",
-        "create_rewards",
-        "manage_rewards",
-        "approve_organizations",
-        "manage_admins",
-      ],
       app_role: ["agent", "admin"],
       organization_permission_type: [
         "mobilizing_partners",
