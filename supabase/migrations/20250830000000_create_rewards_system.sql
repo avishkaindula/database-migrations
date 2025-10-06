@@ -25,7 +25,6 @@ CREATE TABLE IF NOT EXISTS public.reward_redemptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     reward_id UUID NOT NULL REFERENCES public.rewards(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    agent_profile_id UUID REFERENCES public.agent_profiles(id) ON DELETE CASCADE,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'fulfilled')),
     points_spent INTEGER NOT NULL,
     redemption_notes TEXT, -- User's notes or additional info
@@ -48,7 +47,6 @@ CREATE INDEX idx_rewards_created_by ON public.rewards(created_by);
 CREATE INDEX idx_reward_redemptions_user ON public.reward_redemptions(user_id);
 CREATE INDEX idx_reward_redemptions_reward ON public.reward_redemptions(reward_id);
 CREATE INDEX idx_reward_redemptions_status ON public.reward_redemptions(status);
-CREATE INDEX idx_reward_redemptions_agent_profile ON public.reward_redemptions(agent_profile_id);
 
 -- Enable RLS
 ALTER TABLE public.rewards ENABLE ROW LEVEL SECURITY;
@@ -62,53 +60,26 @@ CREATE POLICY "Anyone can view active rewards"
     TO authenticated
     USING (status = 'active');
 
--- Organization admins and CIN admins can create rewards
-CREATE POLICY "Admins can create rewards"
+-- Authenticated users can create rewards (adjust based on your auth logic)
+CREATE POLICY "Authenticated users can create rewards"
     ON public.rewards
     FOR INSERT
     TO authenticated
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.agent_profiles ap
-            WHERE ap.user_id = auth.uid()
-            AND (
-                ap.role IN ('cin_admin', 'organization_admin')
-                OR (ap.role = 'organization_admin' AND ap.organization_id = rewards.organization_id)
-            )
-        )
-    );
+    WITH CHECK (created_by = auth.uid());
 
--- Organization admins can update their own rewards, CIN admins can update all
-CREATE POLICY "Admins can update rewards"
+-- Users can update rewards they created
+CREATE POLICY "Users can update their rewards"
     ON public.rewards
     FOR UPDATE
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.agent_profiles ap
-            WHERE ap.user_id = auth.uid()
-            AND (
-                ap.role = 'cin_admin'
-                OR (ap.role = 'organization_admin' AND ap.organization_id = rewards.organization_id)
-            )
-        )
-    );
+    USING (created_by = auth.uid());
 
--- Organization admins can delete their own rewards, CIN admins can delete all
-CREATE POLICY "Admins can delete rewards"
+-- Users can delete rewards they created
+CREATE POLICY "Users can delete their rewards"
     ON public.rewards
     FOR DELETE
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.agent_profiles ap
-            WHERE ap.user_id = auth.uid()
-            AND (
-                ap.role = 'cin_admin'
-                OR (ap.role = 'organization_admin' AND ap.organization_id = rewards.organization_id)
-            )
-        )
-    );
+    USING (created_by = auth.uid());
 
 -- RLS Policies for reward_redemptions table
 -- Users can view their own redemptions
@@ -118,16 +89,16 @@ CREATE POLICY "Users can view their own redemptions"
     TO authenticated
     USING (user_id = auth.uid());
 
--- Admins can view all redemptions
-CREATE POLICY "Admins can view all redemptions"
+-- Allow viewing redemptions for rewards you created
+CREATE POLICY "Reward creators can view redemptions"
     ON public.reward_redemptions
     FOR SELECT
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM public.agent_profiles ap
-            WHERE ap.user_id = auth.uid()
-            AND ap.role IN ('cin_admin', 'organization_admin')
+            SELECT 1 FROM public.rewards r
+            WHERE r.id = reward_redemptions.reward_id
+            AND r.created_by = auth.uid()
         )
     );
 
@@ -138,16 +109,16 @@ CREATE POLICY "Users can create redemption requests"
     TO authenticated
     WITH CHECK (user_id = auth.uid());
 
--- Admins can update redemption status
-CREATE POLICY "Admins can update redemptions"
+-- Reward creators can update redemption status
+CREATE POLICY "Reward creators can update redemptions"
     ON public.reward_redemptions
     FOR UPDATE
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM public.agent_profiles ap
-            WHERE ap.user_id = auth.uid()
-            AND ap.role IN ('cin_admin', 'organization_admin')
+            SELECT 1 FROM public.rewards r
+            WHERE r.id = reward_redemptions.reward_id
+            AND r.created_by = auth.uid()
         )
     );
 
