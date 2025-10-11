@@ -134,12 +134,13 @@ AS $$
 DECLARE
     v_user_points INTEGER;
 BEGIN
-    -- Calculate user's current points from approved mission submissions
-    SELECT COALESCE(SUM(points_awarded), 0)
+    -- Calculate user's current points from point_transactions
+    -- Note: agents.id IS the user_id (references auth.users)
+    SELECT COALESCE(SUM(points_amount), 0)
     INTO v_user_points
-    FROM public.mission_submissions
-    WHERE user_id = p_user_id
-    AND status = 'approved';
+    FROM public.point_transactions
+    WHERE agent_id = p_user_id
+    AND transaction_type IN ('earned', 'bonus');
     
     -- Subtract points already spent on redemptions
     SELECT v_user_points - COALESCE(SUM(points_spent), 0)
@@ -319,12 +320,13 @@ DECLARE
     v_earned_points INTEGER;
     v_spent_points INTEGER;
 BEGIN
-    -- Calculate earned points from approved missions
-    SELECT COALESCE(SUM(points_awarded), 0)
+    -- Calculate earned points from point_transactions
+    -- Note: agents.id IS the user_id (references auth.users)
+    SELECT COALESCE(SUM(points_amount), 0)
     INTO v_earned_points
-    FROM public.mission_submissions
-    WHERE user_id = p_user_id
-    AND status = 'approved';
+    FROM public.point_transactions
+    WHERE agent_id = p_user_id
+    AND transaction_type IN ('earned', 'bonus');
     
     -- Calculate spent points from approved/fulfilled redemptions
     SELECT COALESCE(SUM(points_spent), 0)
