@@ -48,7 +48,7 @@ WHERE status = 'approved';
 -- ======================
 
 create policy "Authenticated users can view organizations" on organizations
-  for select using (auth.role() = 'authenticated');
+  for select using ((select auth.role()) = 'authenticated');
 
 create policy "CIN admins and new admin users can create organizations." on organizations
   for insert with check (
@@ -146,16 +146,16 @@ create policy "Admin memberships policy" on admin_memberships
 
 -- Simple JWT-based policies without database lookups
 create policy "Users can view own roles" on user_roles
-  for select using (user_id = auth.uid());
+  for select using (user_id = (select auth.uid()));
 
 create policy "Authenticated users can insert roles" on user_roles
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check ((select auth.role()) = 'authenticated');
 
 create policy "Users can update own roles" on user_roles
-  for update using (user_id = auth.uid());
+  for update using (user_id = (select auth.uid()));
 
 create policy "Users can delete own roles" on user_roles
-  for delete using (user_id = auth.uid());
+  for delete using (user_id = (select auth.uid()));
 
 -- ===========================
 -- ADMIN MEMBERSHIPS POLICIES
@@ -163,16 +163,16 @@ create policy "Users can delete own roles" on user_roles
 
 -- Simple JWT-based policies without database lookups
 create policy "Admins can view own memberships" on admin_memberships
-  for select using (admin_id = auth.uid());
+  for select using (admin_id = (select auth.uid()));
 
 create policy "Authenticated users can insert memberships" on admin_memberships
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check ((select auth.role()) = 'authenticated');
 
 create policy "Admins can update own memberships" on admin_memberships
-  for update using (admin_id = auth.uid());
+  for update using (admin_id = (select auth.uid()));
 
 create policy "Admins can delete own memberships" on admin_memberships
-  for delete using (admin_id = auth.uid());
+  for delete using (admin_id = (select auth.uid()));
 
 -- ====================================
 -- ORGANIZATION PERMISSIONS POLICIES
@@ -180,13 +180,13 @@ create policy "Admins can delete own memberships" on admin_memberships
 
 -- Simple JWT-based policies without database lookups
 create policy "Users can view org permissions they requested" on organization_permissions
-  for select using (requested_by = auth.uid());
+  for select using (requested_by = (select auth.uid()));
 
 create policy "Anyone can view approved org permissions" on organization_permissions
   for select using (status = 'approved');
 
 create policy "Authenticated users can insert org permissions" on organization_permissions
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check ((select auth.role()) = 'authenticated');
 
 create policy "Users can update org permissions they requested" on organization_permissions
-  for update using (requested_by = auth.uid());
+  for update using (requested_by = (select auth.uid()));

@@ -65,21 +65,21 @@ CREATE POLICY "Authenticated users can create rewards"
     ON public.rewards
     FOR INSERT
     TO authenticated
-    WITH CHECK (created_by = auth.uid());
+    WITH CHECK (created_by = (select auth.uid()));
 
 -- Users can update rewards they created
 CREATE POLICY "Users can update their rewards"
     ON public.rewards
     FOR UPDATE
     TO authenticated
-    USING (created_by = auth.uid());
+    USING (created_by = (select auth.uid()));
 
 -- Users can delete rewards they created
 CREATE POLICY "Users can delete their rewards"
     ON public.rewards
     FOR DELETE
     TO authenticated
-    USING (created_by = auth.uid());
+    USING (created_by = (select auth.uid()));
 
 -- RLS Policies for reward_redemptions table
 -- Users can view their own redemptions
@@ -87,7 +87,7 @@ CREATE POLICY "Users can view their own redemptions"
     ON public.reward_redemptions
     FOR SELECT
     TO authenticated
-    USING (user_id = auth.uid());
+    USING (user_id = (select auth.uid()));
 
 -- Allow viewing redemptions for rewards you created
 CREATE POLICY "Reward creators can view redemptions"
@@ -98,7 +98,7 @@ CREATE POLICY "Reward creators can view redemptions"
         EXISTS (
             SELECT 1 FROM public.rewards r
             WHERE r.id = reward_redemptions.reward_id
-            AND r.created_by = auth.uid()
+            AND r.created_by = (select auth.uid())
         )
     );
 
@@ -107,7 +107,7 @@ CREATE POLICY "Users can create redemption requests"
     ON public.reward_redemptions
     FOR INSERT
     TO authenticated
-    WITH CHECK (user_id = auth.uid());
+    WITH CHECK (user_id = (select auth.uid()));
 
 -- Reward creators can update redemption status
 CREATE POLICY "Reward creators can update redemptions"
@@ -118,7 +118,7 @@ CREATE POLICY "Reward creators can update redemptions"
         EXISTS (
             SELECT 1 FROM public.rewards r
             WHERE r.id = reward_redemptions.reward_id
-            AND r.created_by = auth.uid()
+            AND r.created_by = (select auth.uid())
         )
     );
 
