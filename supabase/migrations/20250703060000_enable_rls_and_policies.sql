@@ -157,33 +157,18 @@ create policy "Users can update own roles" on user_roles
 create policy "Users can delete own roles" on user_roles
   for delete using (user_id = (select auth.uid()));
 
--- ===========================
--- ADMIN MEMBERSHIPS POLICIES
--- ===========================
-
--- Simple JWT-based policies without database lookups
-create policy "Admins can view own memberships" on admin_memberships
-  for select using (admin_id = (select auth.uid()));
-
-create policy "Authenticated users can insert memberships" on admin_memberships
-  for insert with check ((select auth.role()) = 'authenticated');
-
-create policy "Admins can update own memberships" on admin_memberships
-  for update using (admin_id = (select auth.uid()));
-
-create policy "Admins can delete own memberships" on admin_memberships
-  for delete using (admin_id = (select auth.uid()));
+-- Note: admin_memberships policies are defined earlier in this file with the consolidated "Admin memberships policy"
+-- which covers SELECT, INSERT, UPDATE, and DELETE actions to avoid multiple permissive policies
 
 -- ====================================
 -- ORGANIZATION PERMISSIONS POLICIES
 -- ====================================
 
--- Simple JWT-based policies without database lookups
-create policy "Users can view org permissions they requested" on organization_permissions
-  for select using (requested_by = (select auth.uid()));
-
-create policy "Anyone can view approved org permissions" on organization_permissions
-  for select using (status = 'approved');
+-- Consolidated SELECT policy: users can view permissions they requested OR approved permissions
+create policy "Users can view org permissions" on organization_permissions
+  for select using (
+    requested_by = (select auth.uid()) OR status = 'approved'
+  );
 
 create policy "Authenticated users can insert org permissions" on organization_permissions
   for insert with check ((select auth.role()) = 'authenticated');

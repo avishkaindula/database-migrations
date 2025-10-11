@@ -82,19 +82,13 @@ CREATE POLICY "Users can delete their rewards"
     USING (created_by = (select auth.uid()));
 
 -- RLS Policies for reward_redemptions table
--- Users can view their own redemptions
-CREATE POLICY "Users can view their own redemptions"
-    ON public.reward_redemptions
-    FOR SELECT
-    TO authenticated
-    USING (user_id = (select auth.uid()));
-
--- Allow viewing redemptions for rewards you created
-CREATE POLICY "Reward creators can view redemptions"
+-- Consolidated SELECT policy: users can view their own redemptions OR redemptions for rewards they created
+CREATE POLICY "Users can view redemptions"
     ON public.reward_redemptions
     FOR SELECT
     TO authenticated
     USING (
+        user_id = (select auth.uid()) OR
         EXISTS (
             SELECT 1 FROM public.rewards r
             WHERE r.id = reward_redemptions.reward_id
