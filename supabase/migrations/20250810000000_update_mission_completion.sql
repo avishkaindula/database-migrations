@@ -7,10 +7,14 @@ CREATE OR REPLACE FUNCTION complete_mission_submission(
   p_review_notes text DEFAULT NULL,
   p_review_score integer DEFAULT NULL
 )
-RETURNS void AS $$
+RETURNS void 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 DECLARE
-  v_submission mission_submissions%ROWTYPE;
-  v_mission missions%ROWTYPE;
+  v_submission public.mission_submissions%ROWTYPE;
+  v_mission public.missions%ROWTYPE;
   v_current_points integer;
   v_current_energy integer;
   v_new_points_balance integer;
@@ -18,7 +22,7 @@ DECLARE
 BEGIN
   -- Get submission details
   SELECT * INTO v_submission
-  FROM mission_submissions
+  FROM public.mission_submissions
   WHERE id = p_submission_id AND status = 'completed';
   
   IF NOT FOUND THEN
@@ -32,12 +36,12 @@ BEGIN
   
   -- Get mission details
   SELECT * INTO v_mission
-  FROM missions
+  FROM public.missions
   WHERE id = v_submission.mission_id;
   
   -- Get current agent balances
   SELECT points, energy INTO v_current_points, v_current_energy
-  FROM agents
+  FROM public.agents
   WHERE id = v_submission.agent_id;
   
   -- Calculate new balances
@@ -45,7 +49,7 @@ BEGIN
   v_new_energy_balance := v_current_energy + v_mission.energy_awarded;
   
   -- Create point transaction
-  INSERT INTO point_transactions (
+  INSERT INTO public.point_transactions (
     agent_id, 
     mission_id, 
     submission_id,
@@ -68,7 +72,7 @@ BEGIN
   );
   
   -- Create energy transaction
-  INSERT INTO energy_transactions (
+  INSERT INTO public.energy_transactions (
     agent_id, 
     mission_id, 
     submission_id,
@@ -91,7 +95,7 @@ BEGIN
   );
   
   -- Update submission status to reviewed (since we're auto-approving for now)
-  UPDATE mission_submissions
+  UPDATE public.mission_submissions
   SET 
     status = 'reviewed',
     reviewed_by = p_reviewed_by,
@@ -101,17 +105,21 @@ BEGIN
   WHERE id = p_submission_id;
   
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create function to auto-complete mission when all evidence is submitted
 -- This is called from the application when all guidance steps are completed
 CREATE OR REPLACE FUNCTION auto_complete_mission_submission(
   p_submission_id uuid
 )
-RETURNS json AS $$
+RETURNS json 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 DECLARE
-  v_submission mission_submissions%ROWTYPE;
-  v_mission missions%ROWTYPE;
+  v_submission public.mission_submissions%ROWTYPE;
+  v_mission public.missions%ROWTYPE;
   v_guidance_steps jsonb;
   v_evidence jsonb;
   v_step jsonb;
@@ -120,7 +128,7 @@ DECLARE
 BEGIN
   -- Get submission details
   SELECT * INTO v_submission
-  FROM mission_submissions
+  FROM public.mission_submissions
   WHERE id = p_submission_id;
   
   IF NOT FOUND THEN
@@ -129,7 +137,7 @@ BEGIN
   
   -- Get mission details and guidance steps
   SELECT * INTO v_mission
-  FROM missions
+  FROM public.missions
   WHERE id = v_submission.mission_id;
   
   v_guidance_steps := v_mission.guidance_steps;
@@ -169,4 +177,4 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RETURN json_build_object('success', false, 'error', SQLERRM);
 END;
-$$ LANGUAGE plpgsql;
+$$;

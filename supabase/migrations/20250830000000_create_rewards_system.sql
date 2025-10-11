@@ -130,6 +130,7 @@ CREATE OR REPLACE FUNCTION check_user_points_for_redemption(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
     v_user_points INTEGER;
@@ -161,6 +162,7 @@ CREATE OR REPLACE FUNCTION redeem_reward(
 RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
     v_user_id UUID;
@@ -248,6 +250,7 @@ CREATE OR REPLACE FUNCTION review_redemption(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
     v_reviewer_id UUID;
@@ -315,6 +318,7 @@ CREATE OR REPLACE FUNCTION get_user_available_points(p_user_id UUID)
 RETURNS INTEGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
     v_earned_points INTEGER;
@@ -343,13 +347,13 @@ $$;
 CREATE TRIGGER update_rewards_updated_at
     BEFORE UPDATE ON public.rewards
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Create updated_at trigger for reward_redemptions
 CREATE TRIGGER update_reward_redemptions_updated_at
     BEFORE UPDATE ON public.reward_redemptions
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO authenticated;

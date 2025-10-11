@@ -163,32 +163,36 @@ CREATE INDEX idx_energy_transactions_type ON energy_transactions(transaction_typ
 
 -- Create function to update agent balances based on transactions
 CREATE OR REPLACE FUNCTION update_agent_balance()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 BEGIN
   IF TG_TABLE_NAME = 'point_transactions' THEN
-    UPDATE agents 
+    UPDATE public.agents 
     SET points = NEW.balance_after
     WHERE id = NEW.agent_id;
   ELSIF TG_TABLE_NAME = 'energy_transactions' THEN
-    UPDATE agents 
+    UPDATE public.agents 
     SET energy = NEW.balance_after
     WHERE id = NEW.agent_id;
   END IF;
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create triggers to automatically update agent balances
 CREATE TRIGGER update_agent_points_balance
-  AFTER INSERT ON point_transactions
+  AFTER INSERT ON public.point_transactions
   FOR EACH ROW
-  EXECUTE FUNCTION update_agent_balance();
+  EXECUTE FUNCTION public.update_agent_balance();
 
 CREATE TRIGGER update_agent_energy_balance
-  AFTER INSERT ON energy_transactions
+  AFTER INSERT ON public.energy_transactions
   FOR EACH ROW
-  EXECUTE FUNCTION update_agent_balance();
+  EXECUTE FUNCTION public.update_agent_balance();
 
 -- Create function to bookmark or start a mission
 CREATE OR REPLACE FUNCTION bookmark_or_start_mission(
@@ -196,7 +200,11 @@ CREATE OR REPLACE FUNCTION bookmark_or_start_mission(
   p_mission_id uuid,
   p_action text -- 'bookmark' or 'start'
 )
-RETURNS uuid AS $$
+RETURNS uuid 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 DECLARE
   v_submission_id uuid;
   v_submission_status text;
@@ -207,12 +215,12 @@ BEGIN
   END IF;
   
   -- Check if mission exists and is published
-  IF NOT EXISTS (SELECT 1 FROM missions WHERE id = p_mission_id AND status = 'published') THEN
+  IF NOT EXISTS (SELECT 1 FROM public.missions WHERE id = p_mission_id AND status = 'published') THEN
     RAISE EXCEPTION 'Mission not found or not published';
   END IF;
   
   -- Check if agent exists
-  IF NOT EXISTS (SELECT 1 FROM agents WHERE id = p_agent_id) THEN
+  IF NOT EXISTS (SELECT 1 FROM public.agents WHERE id = p_agent_id) THEN
     RAISE EXCEPTION 'Agent not found';
   END IF;
   
@@ -220,13 +228,13 @@ BEGIN
   v_submission_status := CASE WHEN p_action = 'bookmark' THEN 'bookmarked' ELSE 'started' END;
   
   -- Insert or update submission
-  INSERT INTO mission_submissions (agent_id, mission_id, status)
+  INSERT INTO public.mission_submissions (agent_id, mission_id, status)
   VALUES (p_agent_id, p_mission_id, v_submission_status)
   ON CONFLICT (agent_id, mission_id) 
   DO UPDATE SET 
     status = CASE 
-      WHEN mission_submissions.status = 'bookmarked' AND v_submission_status = 'started' THEN 'started'
-      WHEN mission_submissions.status IN ('started', 'in_progress') AND v_submission_status = 'bookmarked' THEN mission_submissions.status
+      WHEN public.mission_submissions.status = 'bookmarked' AND v_submission_status = 'started' THEN 'started'
+      WHEN public.mission_submissions.status IN ('started', 'in_progress') AND v_submission_status = 'bookmarked' THEN public.mission_submissions.status
       ELSE v_submission_status
     END,
     updated_at = now()
@@ -234,14 +242,14 @@ BEGIN
   
   -- If bookmarking, also add to bookmarks table
   IF p_action = 'bookmark' THEN
-    INSERT INTO mission_bookmarks (agent_id, mission_id)
+    INSERT INTO public.mission_bookmarks (agent_id, mission_id)
     VALUES (p_agent_id, p_mission_id)
     ON CONFLICT (agent_id, mission_id) DO NOTHING;
   END IF;
   
   RETURN v_submission_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Set up storage policies for mission content (private bucket)
 CREATE POLICY "Authenticated users can view mission content" ON storage.objects
@@ -284,21 +292,25 @@ CREATE POLICY "Authenticated users can view mission submissions" ON storage.obje
 
 -- Create function to automatically update updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 BEGIN
   NEW.updated_at = timezone('utc'::text, now());
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create updated_at trigger for missions table
 CREATE TRIGGER update_missions_updated_at
-  BEFORE UPDATE ON missions
+  BEFORE UPDATE ON public.missions
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Create updated_at trigger for mission_submissions table
 CREATE TRIGGER update_mission_submissions_updated_at
-  BEFORE UPDATE ON mission_submissions
+  BEFORE UPDATE ON public.mission_submissions
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION public.update_updated_at_column();
