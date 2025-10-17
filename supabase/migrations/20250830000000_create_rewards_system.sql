@@ -53,12 +53,15 @@ ALTER TABLE public.rewards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reward_redemptions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for rewards table
--- Anyone authenticated can view active rewards
-CREATE POLICY "Anyone can view active rewards"
+-- Users can view active rewards OR their own rewards (any status)
+CREATE POLICY "Users can view rewards"
     ON public.rewards
     FOR SELECT
     TO authenticated
-    USING (status = 'active');
+    USING (
+        status = 'active' OR 
+        created_by = (select auth.uid())
+    );
 
 -- Authenticated users can create rewards (adjust based on your auth logic)
 CREATE POLICY "Authenticated users can create rewards"
@@ -67,12 +70,13 @@ CREATE POLICY "Authenticated users can create rewards"
     TO authenticated
     WITH CHECK (created_by = (select auth.uid()));
 
--- Users can update rewards they created
+-- Users can update rewards they created (both USING and WITH CHECK required)
 CREATE POLICY "Users can update their rewards"
     ON public.rewards
     FOR UPDATE
     TO authenticated
-    USING (created_by = (select auth.uid()));
+    USING (created_by = (select auth.uid()))
+    WITH CHECK (created_by = (select auth.uid()));
 
 -- Users can delete rewards they created
 CREATE POLICY "Users can delete their rewards"
