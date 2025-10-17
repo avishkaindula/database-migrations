@@ -704,19 +704,19 @@ export type Database = {
         Returns: Json
       }
       bookmark_or_start_mission: {
-        Args: { p_action: string; p_mission_id: string; p_agent_id: string }
+        Args: { p_agent_id: string; p_mission_id: string; p_action: string }
         Returns: string
       }
       check_user_points_for_redemption: {
-        Args: { p_points_cost: number; p_user_id: string }
+        Args: { p_user_id: string; p_points_cost: number }
         Returns: boolean
       }
       complete_mission_submission: {
         Args: {
           p_submission_id: string
-          p_review_score?: number
-          p_review_notes?: string
           p_reviewed_by?: string
+          p_review_notes?: string
+          p_review_score?: number
         }
         Returns: undefined
       }
@@ -727,13 +727,13 @@ export type Database = {
       get_pending_organization_approvals: {
         Args: Record<PropertyKey, never>
         Returns: {
-          requested_privileges: Json
-          admin_name: string
-          admin_email: string
-          created_at: string
           organization_id: string
           organization_name: string
           contact_email: string
+          admin_name: string
+          admin_email: string
+          requested_privileges: Json
+          created_at: string
         }[]
       }
       get_user_available_points: {
@@ -741,14 +741,14 @@ export type Database = {
         Returns: number
       }
       redeem_reward: {
-        Args: { p_redemption_notes?: string; p_reward_id: string }
+        Args: { p_reward_id: string; p_redemption_notes?: string }
         Returns: string
       }
       reject_organization_privileges: {
         Args: {
           target_organization_id: string
-          rejection_reason?: string
           privilege_types?: string[]
+          rejection_reason?: string
         }
         Returns: Json
       }
