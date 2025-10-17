@@ -121,7 +121,7 @@ CREATE POLICY "Reward creators can update redemptions"
     );
 
 -- Function to check if user has enough points
-CREATE OR REPLACE FUNCTION check_user_points_for_redemption(
+CREATE OR REPLACE FUNCTION public.check_user_points_for_redemption(
     p_user_id UUID,
     p_points_cost INTEGER
 )
@@ -153,7 +153,7 @@ END;
 $$;
 
 -- Function to handle reward redemption
-CREATE OR REPLACE FUNCTION redeem_reward(
+CREATE OR REPLACE FUNCTION public.redeem_reward(
     p_reward_id UUID,
     p_redemption_notes TEXT DEFAULT NULL
 )
@@ -198,7 +198,7 @@ BEGIN
     END IF;
     
     -- Check if user has enough points
-    IF NOT check_user_points_for_redemption(v_user_id, v_points_cost) THEN
+    IF NOT public.check_user_points_for_redemption(v_user_id, v_points_cost) THEN
         RAISE EXCEPTION 'Insufficient points';
     END IF;
     
@@ -237,7 +237,7 @@ END;
 $$;
 
 -- Function to approve/reject redemption
-CREATE OR REPLACE FUNCTION review_redemption(
+CREATE OR REPLACE FUNCTION public.review_redemption(
     p_redemption_id UUID,
     p_status TEXT,
     p_review_notes TEXT DEFAULT NULL
@@ -309,7 +309,7 @@ END;
 $$;
 
 -- Function to get user's available points
-CREATE OR REPLACE FUNCTION get_user_available_points(p_user_id UUID)
+CREATE OR REPLACE FUNCTION public.get_user_available_points(p_user_id UUID)
 RETURNS INTEGER
 LANGUAGE plpgsql
 SECURITY DEFINER
