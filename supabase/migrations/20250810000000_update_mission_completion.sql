@@ -157,8 +157,10 @@ BEGIN
   
   -- If all steps completed, auto-complete and award points
   IF v_all_completed AND v_submission.status != 'reviewed' THEN
-    -- Call the completion function
-    PERFORM complete_mission_submission(p_submission_id);
+    -- Call the completion function with named parameter
+    PERFORM complete_mission_submission(
+      p_submission_id := p_submission_id
+    );
     
     RETURN json_build_object(
       'success', true, 
