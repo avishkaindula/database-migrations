@@ -167,7 +167,6 @@ DECLARE
     v_points_cost INTEGER;
     v_quantity_available INTEGER;
     v_redemption_id UUID;
-    v_agent_profile_id UUID;
 BEGIN
     v_user_id := auth.uid();
     
@@ -175,10 +174,10 @@ BEGIN
         RAISE EXCEPTION 'User must be authenticated';
     END IF;
     
-    -- Get agent profile id
-    SELECT id INTO v_agent_profile_id
-    FROM public.agent_profiles
-    WHERE user_id = v_user_id;
+    -- Verify user exists as an agent
+    IF NOT EXISTS (SELECT 1 FROM public.agents WHERE id = v_user_id) THEN
+        RAISE EXCEPTION 'User is not registered as an agent';
+    END IF;
     
     -- Get reward details
     SELECT points_cost, quantity_available
@@ -207,14 +206,12 @@ BEGIN
     INSERT INTO public.reward_redemptions (
         reward_id,
         user_id,
-        agent_profile_id,
         points_spent,
         redemption_notes,
         status
     ) VALUES (
         p_reward_id,
         v_user_id,
-        v_agent_profile_id,
         v_points_cost,
         p_redemption_notes,
         'pending'
@@ -258,11 +255,11 @@ DECLARE
 BEGIN
     v_reviewer_id := auth.uid();
     
-    -- Check if user is admin
+    -- Check if user is admin (check user_roles table for 'admin' role)
     SELECT EXISTS (
-        SELECT 1 FROM public.agent_profiles
+        SELECT 1 FROM public.user_roles
         WHERE user_id = v_reviewer_id
-        AND role IN ('cin_admin', 'organization_admin')
+        AND role = 'admin'
     ) INTO v_is_admin;
     
     IF NOT v_is_admin THEN
